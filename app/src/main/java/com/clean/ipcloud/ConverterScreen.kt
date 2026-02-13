@@ -3,14 +3,38 @@ package com.clean.ipcloud
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -18,12 +42,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.net.HttpURLConnection
+import java.net.URL
 
 @Composable
 fun ConverterScreen(vm: ScannerViewModel) {
     var rawConfigs by remember { mutableStateOf("") }
     var resultConfigs by remember { mutableStateOf("") }
     var targetIp by remember { mutableStateOf(vm.selectedIpForConverter.value) }
+    var urlInput by remember { mutableStateOf("") }
+    var isLoading by remember { mutableStateOf(false) }
+
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+
+    val defaultUrls = listOf(
+        "https://raw.githubusercontent.com/MatinGhanbari/v2ray-configs/main/subscriptions/v2ray/all_sub.txt",
+        "https://raw.githubusercontent.com/10ium/V2RayAggregator/master/sub/sub_merge.txt"
+    )
 
     LaunchedEffect(vm.selectedIpForConverter.value) {
         if (vm.selectedIpForConverter.value.isNotEmpty()) {
@@ -31,47 +71,79 @@ fun ConverterScreen(vm: ScannerViewModel) {
         }
     }
 
-    val context = LocalContext.current
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("مبدل هوشمند کانفیگ", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text("دریافت و مبدل هوشمند", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(16.dp))
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            defaultUrls.forEachIndexed { index, url ->
+                OutlinedButton(
+                    onClick = { urlInput = url },
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(8.dp)
+                ) { Text("منبع ${index + 1}", fontSize = 12.sp) }
+            }
+        }
 
-        // فیلد آی‌پی
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = urlInput,
+            onValueChange = { urlInput = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("آدرس منبع کانفیگ") },
+            shape = RoundedCornerShape(12.dp),
+            leadingIcon = {
+                if (isLoading) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    TextButton(onClick = {
+                        if (urlInput.isBlank()) return@TextButton
+                        isLoading = true
+                        scope.launch {
+                            val fetched = fetchConfigsFromUrl(urlInput)
+                            if (fetched.isEmpty()) {
+                                // متن درخواستی شما در صورت عدم موفقیت
+                                Toast.makeText(context, "ارتباط برقرار نشد. لطفاً از اتصال اینترنت یا ابزار تغییر آی‌پی خود مطمئن شوید.", Toast.LENGTH_LONG).show()
+                            } else {
+                                val randomConfigs = fetched.shuffled().take(50)
+                                rawConfigs = randomConfigs.joinToString("\n")
+                                Toast.makeText(context, "تعداد ${randomConfigs.size} کانفیگ با موفقیت دریافت شد", Toast.LENGTH_SHORT).show()
+                            }
+                            isLoading = false
+                        }
+                    }) { Text("دریافت", fontWeight = FontWeight.Bold) }
+                }
+            }
+        )
+
+        Divider(modifier = Modifier.padding(vertical = 16.dp), thickness = 1.dp, color = Color.LightGray)
+
         OutlinedTextField(
             value = targetIp,
             onValueChange = { targetIp = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("آی‌پی هدف") },
+            label = { Text("آی‌پی هدف (تمیز)") },
             shape = RoundedCornerShape(12.dp),
             singleLine = true
         )
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // باکس ورودی - دکمه چسباندن به سمت چپ منتقل شد
         OutlinedTextField(
             value = rawConfigs,
             onValueChange = { rawConfigs = it },
             modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
-            label = { Text("ورودی: کانفیگ‌های خام") },
+            label = { Text("لیست ورودی") },
             shape = RoundedCornerShape(12.dp),
-            // استفاده از leadingIcon برای نمایش در سمت چپ در چیدمان RTL
             leadingIcon = {
                 TextButton(onClick = {
                     val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                     rawConfigs = clip
-                }) {
-                    Text("چسباندن", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
+                }) { Text("چسباندن") }
             }
         )
 
@@ -80,14 +152,14 @@ fun ConverterScreen(vm: ScannerViewModel) {
         Button(
             onClick = {
                 if (targetIp.isBlank()) {
-                    Toast.makeText(context, "آی‌پی خالی است", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "ابتدا آی‌پی هدف را مشخص کنید", Toast.LENGTH_SHORT).show()
                 } else {
                     val converted = processConfigsLogic(rawConfigs, targetIp)
                     if (converted.isBlank()) {
-                        Toast.makeText(context, "❌ کانفیگ معتبری یافت نشد", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "کانفیگ معتبری در لیست ورودی پیدا نشد.", Toast.LENGTH_LONG).show()
                     } else {
                         resultConfigs = converted
-                        Toast.makeText(context, "✅ تبدیل انجام شد", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "عملیات تبدیل با موفقیت انجام شد", Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -99,65 +171,66 @@ fun ConverterScreen(vm: ScannerViewModel) {
             Text("تبدیل و جایگزینی")
         }
 
-        // باکس خروجی - دکمه کپی به سمت چپ منتقل شد
         if (resultConfigs.isNotEmpty()) {
             Spacer(modifier = Modifier.height(20.dp))
-
             OutlinedTextField(
                 value = resultConfigs,
                 onValueChange = { resultConfigs = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
-                label = { Text("خروجی: کانفیگ‌های تمیز") },
+                label = { Text("نتیجه نهایی") },
                 shape = RoundedCornerShape(12.dp),
                 readOnly = true,
-                // استفاده از leadingIcon برای نمایش در سمت چپ
                 leadingIcon = {
                     TextButton(onClick = {
                         val clip = android.content.ClipData.newPlainText("Clean", resultConfigs)
                         clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "کپی شد", Toast.LENGTH_SHORT).show()
-                    }) {
-                        Text("کپی همه", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
-                    }
+                        Toast.makeText(context, "در کلیپ‌بورد کپی شد", Toast.LENGTH_SHORT).show()
+                    }) { Text("کپی کُل", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold) }
                 }
             )
         }
     }
 }
 
+// تابع واکشی بدون نیاز به کتابخانه خارجی
+suspend fun fetchConfigsFromUrl(url: String): List<String> {
+    return withContext(Dispatchers.IO) {
+        try {
+            val connection = URL(url).openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 8000
+            connection.readTimeout = 8000
+
+            val responseCode = connection.responseCode
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                val text = connection.inputStream.bufferedReader().use { it.readText() }
+                val pattern = """(vless|vmess|trojan)://[^\s"<>]+""".toRegex()
+                pattern.findAll(text).map { it.value }.toList()
+            } else emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
+}
+
+// تابع منطق تبدیل (بدون تغییر)
 fun processConfigsLogic(input: String, newIp: String): String {
     if (input.isBlank() || newIp.isBlank()) return ""
-
     val lines = input.split("\n")
-    val processedLines = lines.map { line ->
-        // ۱. پاکسازی: حذف کوتیشن، کاما و فضاهای خالی ابتدا و انتها
+    return lines.map { line ->
         var cleanLine = line.trim().replace("\"", "").replace(",", "")
-
         if (cleanLine.isEmpty()) return@map ""
-
         when {
-            // برای VLESS و Trojan
             cleanLine.startsWith("vless://") || cleanLine.startsWith("trojan://") -> {
-                try {
-                    val atIndex = cleanLine.indexOf("@")
-                    if (atIndex != -1) {
-                        val prefix = cleanLine.substring(0, atIndex + 1) // vless://uuid@
-                        val rest = cleanLine.substring(atIndex + 1) // ip:port...
-
-                        // پیدا کردن اولین جداکننده (دو نقطه برای پورت یا علامت سوال برای تنظیمات)
-                        val separators = charArrayOf(':', '/', '?', '#')
-                        val firstSep = rest.indexOfAny(separators)
-
-                        if (firstSep != -1) {
-                            prefix + newIp + rest.substring(firstSep)
-                        } else {
-                            prefix + newIp
-                        }
-                    } else cleanLine
-                } catch (e: Exception) { cleanLine }
+                val atIndex = cleanLine.indexOf("@")
+                if (atIndex != -1) {
+                    val prefix = cleanLine.substring(0, atIndex + 1)
+                    val rest = cleanLine.substring(atIndex + 1)
+                    val separators = charArrayOf(':', '/', '?', '#')
+                    val firstSep = rest.indexOfAny(separators)
+                    if (firstSep != -1) prefix + newIp + rest.substring(firstSep) else prefix + newIp
+                } else cleanLine
             }
-
-            // برای VMess
             cleanLine.startsWith("vmess://") -> {
                 try {
                     val base64Data = cleanLine.removePrefix("vmess://")
@@ -168,7 +241,5 @@ fun processConfigsLogic(input: String, newIp: String): String {
             }
             else -> ""
         }
-    }.filter { it.isNotBlank() }
-
-    return processedLines.joinToString("\n")
+    }.filter { it.isNotBlank() }.joinToString("\n")
 }

@@ -253,14 +253,14 @@ suspend fun runAdvancedDnsTest(
                         verifiedDns.add(DnsResult(trimmedDns, latency))
                     }
                 } catch (e: Exception) {
-                    // اگر هر مرحله با خطا مواجه شد (تایم‌اوت و...)، این IP نادیده گرفته می‌شود
+
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        // مرتب‌سازی بر اساس کمترین تأخیر و برگرداندن نتیجه
+
         verifiedDns.sortBy { it.latency }
         verifiedDns
     }

@@ -7,6 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # این خط اجازه ساخت Release را به اکشن می‌دهد
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout Code
@@ -23,11 +26,9 @@ jobs:
         run: chmod +x gradlew
 
       - name: Decode Keystore
-        # متن Base64 را به فایل فیزیکی با نام ipcloud.jks تبدیل می‌کند
         run: echo "${{ secrets.SIGNING_KEY }}" | base64 --decode > ipcloud.jks
 
       - name: Build Signed APK
-        # از آدرس مستقیم استفاده می‌کنیم تا سیستم بیلد فایل را دقیق پیدا کند
         run: |
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=$(pwd)/ipcloud.jks \
@@ -35,8 +36,23 @@ jobs:
             -Pandroid.injected.signing.key.alias=${{ secrets.ALIAS }} \
             -Pandroid.injected.signing.key.password=${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Rename APK
+        # تغییر نام فایل به اسم دلخواه شما
+        run: mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/IP-Cloud-V1.apk
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: IP-Cloud-Signed-APK
-          path: app/build/outputs/apk/release/*.apk
+          files: app/build/outputs/apk/release/IP-Cloud-V1.apk
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          body: |
+            🚀 نسخه جدید اپلیکیشن آماده شد!
+            
+            ✨ تغییرات:
+            - بهبود عملکرد و رفع باگ‌ها
+            - بیلد خودکار توسط GitHub Actions
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

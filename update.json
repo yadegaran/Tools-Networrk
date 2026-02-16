@@ -1,5 +1,7 @@
 {
   "versionCode": 2,
-  "downloadUrl": "https://github.com/yadegaran/Tools-Networrk/releases/download/v1.0.9/Tools-Net.apk",
-  "changeLog": "۱- اضافه شدن کانفیگ رایگان\n۲- رفع مشکل هنگ کردن\n۳- بهبود سرعت اسکنر"
+  "versionName": "1.1.0",
+  "downloadUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
+  "mirrorUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
+  "changeLog": "تغییرات نسخه جدید:\n• اضافه شدن بخش دریافت کانفیگ‌های رایگان\n• بهینه‌سازی سرعت اسکنر\n• رفع مشکل هنگ کردن در لیست‌های طولانی\n• بهبود رابط کاربری منوی کناری"
 }

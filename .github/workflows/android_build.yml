@@ -38,20 +38,21 @@ jobs:
 
       - name: Rename APK
         # تغییر نام فایل به اسم دلخواه شما
-        run: mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/IP-Cloud-V1.apk
+        run: mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/app.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/IP-Cloud-V1.apk
+          files: app/build/outputs/apk/release/app.apk
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
           body: |
             🚀 نسخه جدید اپلیکیشن آماده شد!
-            
             ✨ تغییرات:
             - بهبود عملکرد و رفع باگ‌ها
-            - بیلد خودکار توسط GitHub Actions
+            - 
+            - 
+            -
           draft: false
           prerelease: false
         env:

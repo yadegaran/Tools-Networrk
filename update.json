@@ -1,6 +1,6 @@
 {
-  "versionCode": 5,
-  "versionName": "5.0",
+  "versionCode": 6,
+  "versionName": "5.1",
   "downloadUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
   "mirrorUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
   "changeLog": "تغییرات نسخه جدید:\n• اضافه شدن بخش دریافت کانفیگ‌های رایگان\n• بهینه‌سازی سرعت اسکنر\n• رفع مشکل هنگ کردن در لیست‌های طولانی\n• بهبود رابط کاربری منوی کناری"

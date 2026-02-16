@@ -86,6 +86,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val vm = ScannerViewModel()
         setContent {
+
+
             // تعریف تم رنگی سفارشی متریال ۳
             val customColorScheme = lightColorScheme(
                 primary = Color(0xFF1976D2),
@@ -274,7 +276,7 @@ fun UpdateMenuItem(context: Context, currentVersionCode: Int) {
     var hasUpdate by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     val currentVersionName = getAppVersion(context) // استفاده از تابع خودتان
-    val scope = rememberCoroutineScope()
+
 
     LaunchedEffect(Unit) {
         val info = fetchUpdateInfo()
@@ -374,17 +376,19 @@ fun UpdateDialog(
 // تابعی برای گرفتن نسخه فعلی اپلیکیشن
 fun getAppVersion(context: Context): String {
     return try {
-        val packageInfo =
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                context.packageManager.getPackageInfo(
-                    context.packageName,
-                    android.content.pm.PackageManager.PackageInfoFlags.of(0)
-                )
-            } else {
-                context.packageManager.getPackageInfo(context.packageName, 0)
-            }
+        val packageInfo = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            context.packageManager.getPackageInfo(
+                context.packageName,
+                android.content.pm.PackageManager.PackageInfoFlags.of(0)
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            context.packageManager.getPackageInfo(context.packageName, 0)
+        }
         packageInfo.versionName ?: "1.0.0"
     } catch (e: Exception) {
+        e.printStackTrace()
         "1.0.0"
     }
 }
+

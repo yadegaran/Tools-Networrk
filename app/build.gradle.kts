@@ -8,12 +8,13 @@ android {
     namespace = "com.tools.net"
     compileSdk = 34
 
+
     defaultConfig {
         applicationId = "com.tools.net"
         minSdk = 24
         targetSdk = 34
-        versionCode = 5
-        versionName = "5.0"
+        versionCode = 6
+        versionName = "5.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -42,6 +43,7 @@ android {
     }
 
     buildFeatures {
+        buildConfig = true
         compose = true
     }
 

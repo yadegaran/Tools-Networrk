@@ -1,4 +1,4 @@
-package com.clean.ipcloud.ui.theme
+package com.tools.net.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

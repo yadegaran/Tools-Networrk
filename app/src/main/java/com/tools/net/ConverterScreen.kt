@@ -1,4 +1,4 @@
-package com.clean.ipcloud
+package com.tools.net
 
 import android.content.ClipboardManager
 import android.content.Context

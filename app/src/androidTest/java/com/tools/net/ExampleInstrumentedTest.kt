@@ -1,4 +1,4 @@
-package com.clean.ipcloud
+package com.tools.net
 
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.test.ext.junit.runners.AndroidJUnit4

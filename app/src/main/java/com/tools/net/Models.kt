@@ -1,4 +1,4 @@
-package com.clean.ipcloud
+package com.tools.net
 
 
 data class IpScanResult(

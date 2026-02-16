@@ -1,14 +1,15 @@
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-}
+    alias(libs.plugins.chaquopy)}
 
 android {
-    namespace = "com.clean.ipcloud"
+    namespace = "com.tools.net"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.clean.ipcloud"
+        applicationId = "com.tools.net"
         minSdk = 24
         targetSdk = 34
         versionCode = 1
@@ -17,6 +18,11 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
             useSupportLibrary = true
+        }
+
+        // تنظیمات NDK برای اجرای پایتون بر روی معماری‌های مختلف موبایل
+        ndk {
+            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
         }
     }
 
@@ -29,24 +35,48 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
+
     kotlinOptions {
         jvmTarget = "1.8"
     }
+
     buildFeatures {
         compose = true
     }
+
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.1"
     }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    chaquopy {
+        defaultConfig {
+
+            version = "3.11"
+
+
+            buildPython("python")
+
+            pip {
+                install("requests")
+                install("speedtest-cli")
+                install("dnspython")
+                install("ping3")
+            }
+        }
+    }
+
+
 }
 
 dependencies {
@@ -58,6 +88,9 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.navigation:navigation-compose:2.7.7")
+
+    // تست‌ها
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -65,6 +98,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
-
 
 }

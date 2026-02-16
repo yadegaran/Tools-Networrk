@@ -38,12 +38,12 @@ jobs:
 
       - name: Rename APK
         # تغییر نام فایل به اسم دلخواه شما
-        run: mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/Tools-Net.apk
+        run: mv app/build/outputs/apk/release/*.apk app/build/outputs/apk/release/app.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/Tools-Net.apk
+          files: app/build/outputs/apk/release/app.apk
           tag_name: v1.0.${{ github.run_number }}
           name: Release v1.0.${{ github.run_number }}
           body: |

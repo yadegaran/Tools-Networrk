@@ -69,7 +69,7 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
             .verticalScroll(scrollState)
     ) {
         Text(
-            "جعبه ابزار پیشرفته",
+            "تست شبکه",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )

@@ -62,8 +62,9 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     object ScannerHome : Screen("scanner", "اسکنر اصلی", Icons.Default.Search)
     object Converter : Screen("converter", "مبدل کانفیگ", Icons.Default.Build)
     object DnsFinder : Screen("dns", "DNS یاب", Icons.Default.Settings)
-    object NetworkTools : Screen("tools", "ابزارهای شبکه", Icons.Default.Info)
+    object NetworkTools : Screen("tools", "تست شبکه", Icons.Default.Info)
     object SpeedTest : Screen("speed", "تست سرعت", Icons.Default.PlayArrow)
+    object FreeConfigs : Screen("free_configs", "کانفیگ رایگان", Icons.Default.Refresh)
 }
 
 class MainActivity : ComponentActivity() {
@@ -100,6 +101,7 @@ fun MainNavigationApp(vm: ScannerViewModel) {
         Screen.Converter,
         Screen.DnsFinder,
         Screen.NetworkTools,
+        Screen.FreeConfigs,
         Screen.SpeedTest
     )
 
@@ -227,6 +229,7 @@ fun AppNavHost(navController: NavHostController, vm: ScannerViewModel) {
         composable(Screen.Converter.route) { ConverterScreen(vm) }
         composable(Screen.DnsFinder.route) { DnsFinderScreen(vm) }
         composable(Screen.NetworkTools.route) { NetworkToolsScreen(vm) }
+        composable(Screen.FreeConfigs.route) { FreeConfigScreen() }
         composable(Screen.SpeedTest.route) { SpeedTestScreen(vm) }
     }
 }

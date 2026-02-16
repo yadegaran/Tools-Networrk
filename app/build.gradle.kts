@@ -2,7 +2,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.jetbrains.kotlin.android)
-    alias(libs.plugins.chaquopy)}
+    }
 
 android {
     namespace = "com.tools.net"
@@ -20,10 +20,6 @@ android {
             useSupportLibrary = true
         }
 
-        // تنظیمات NDK برای اجرای پایتون بر روی معماری‌های مختلف موبایل
-        ndk {
-            abiFilters.addAll(listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64"))
-        }
     }
 
     buildTypes {
@@ -59,22 +55,7 @@ android {
         }
     }
 
-    chaquopy {
-        defaultConfig {
 
-            version = "3.11"
-
-
-            buildPython("python")
-
-            pip {
-                install("requests")
-                install("speedtest-cli")
-                install("dnspython")
-                install("ping3")
-            }
-        }
-    }
 
 
 }

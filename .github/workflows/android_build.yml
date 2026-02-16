@@ -51,7 +51,7 @@ jobs:
             
             ✨ تغییرات:
             - بهبود عملکرد و رفع باگ‌ها
-            - بیلد خودکار توسط GitHub Actions
+           
           draft: false
           prerelease: false
         env:

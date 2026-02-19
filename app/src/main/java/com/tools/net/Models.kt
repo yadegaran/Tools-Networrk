@@ -17,7 +17,7 @@ data class IpScanResult(
 data class UpdateInfo(
     val versionCode: Int,
     val downloadUrl: String,
-    val mirrorUrl: String,
+
     val changeLog: String
 )
 

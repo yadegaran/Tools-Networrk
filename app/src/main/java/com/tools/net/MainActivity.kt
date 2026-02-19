@@ -76,9 +76,12 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector)
     data object DnsFinder : Screen("dns", "DNS یاب", Icons.Default.Refresh) // تغییر آیکون
     data object NetworkTools : Screen("tools", "تست شبکه", Icons.Default.Settings) // تغییر آیکون
     data object SpeedTest : Screen("speed", "تست سرعت", Icons.Default.PlayArrow)
-    data object FreeConfigs : Screen("free_configs", "کانفیگ رایگان", Icons.Default.Menu) // تغییر آیکون
+    data object FreeConfigs :
+        Screen("free_configs", "کانفیگ رایگان", Icons.Default.Menu) // تغییر آیکون
+
     data object FragmentFinder : Screen("fragment_finder", "فرگمنت یاب", Icons.Default.Build)
-    data object SupportScreen : Screen("support", "عیب یابی", Icons.Default.Info) // تغییر مسیر و آیکون
+    data object SupportScreen :
+        Screen("support", "عیب یابی", Icons.Default.Info) // تغییر مسیر و آیکون
 }
 
 class MainActivity : ComponentActivity() {
@@ -110,6 +113,7 @@ fun MainNavigationApp(vm: ScannerViewModel) {
 
     var showDialog by remember { mutableStateOf(false) }
     var updateData by remember { mutableStateOf<UpdateInfo?>(null) }
+
 
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -192,7 +196,10 @@ fun MainNavigationApp(vm: ScannerViewModel) {
                 Divider(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
 
                 Column(modifier = Modifier.padding(bottom = 12.dp)) {
-                    UpdateMenuItem(UpdateManager.updateManager.getCurrentVersionCode(context))
+                    UpdateMenuItem(currentVersionCode) { info ->
+                        updateData = info
+                        showDialog = true
+                    }
                     GitHubMenuItem(context)
                 }
             }
@@ -226,30 +233,47 @@ fun MainNavigationApp(vm: ScannerViewModel) {
 }
 
 @Composable
-fun UpdateMenuItem(currentVersionCode: Int) {
+fun UpdateMenuItem(currentVersionCode: Int, onUpdateFound: (UpdateInfo) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+
+    var isChecking by remember { mutableStateOf(false) }
     var hasUpdate by remember { mutableStateOf(false) }
     var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     val currentVersionName = remember { UpdateManager.updateManager.getAppVersionName(context) }
 
+    // بررسی اولیه موقع باز شدن منو
     LaunchedEffect(Unit) {
         val info = UpdateManager.updateManager.fetchUpdateInfo()
         if (info != null && info.versionCode > currentVersionCode) {
             updateInfo = info
             hasUpdate = true
+            Toast.makeText(context, "سرور: ${info.versionCode} | شما: $currentVersionCode", Toast.LENGTH_LONG).show()
         }
+
     }
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable {
-                if (hasUpdate && updateInfo != null) {
-                    UpdateManager.updateManager.startDownload(context, updateInfo!!.downloadUrl)
-                } else {
-                    Toast
-                        .makeText(context, "نسخه شما به‌روز است.", Toast.LENGTH_SHORT)
-                        .show()
+            .clickable(enabled = !isChecking) {
+                scope.launch {
+                    isChecking = true
+                    // نمایش پیغام برای شروع بررسی دستی
+                    Toast.makeText(context, "در حال بررسی نسخه جدید...", Toast.LENGTH_SHORT).show()
+
+                    val info = UpdateManager.updateManager.fetchUpdateInfo()
+                    isChecking = false
+
+                    if (info != null && info.versionCode > currentVersionCode) {
+                        updateInfo = info
+                        hasUpdate = true
+                        // باز کردن دیالوگ اصلی
+                        onUpdateFound(info)
+                    } else {
+                        hasUpdate = false
+                        Toast.makeText(context, "شما از آخرین نسخه استفاده می‌کنید.", Toast.LENGTH_SHORT).show()
+                    }
                 }
             }
             .padding(16.dp),
@@ -264,7 +288,7 @@ fun UpdateMenuItem(currentVersionCode: Int) {
         Column {
             Text("نسخه $currentVersionName", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Text(
-                if (hasUpdate) "آپدیت جدید آماده دانلود است" else "بررسی آپدیت از گیت‌هاب",
+                text = if (isChecking) "در حال بررسی..." else if (hasUpdate) "نسخه جدید یافت شد!" else "بررسی به‌روزرسانی",
                 fontSize = 11.sp,
                 color = if (hasUpdate) Color(0xFF4CAF50) else Color.Gray
             )

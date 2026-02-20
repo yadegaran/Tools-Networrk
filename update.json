@@ -1,6 +1,6 @@
 {
-  "versionCode": 9,
-  "versionName": "1.0.9",
+  "versionCode": 10,
+  "versionName": "1.0.10",
   "downloadUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
-  "changeLog": "تغییرات نسخه جدید:\nرفع باگ فرگمنت\n-افزودن ادرس پروژه\n-رفع باگ اپدیت برنامه\n"
+  "changeLog": "تغییرات نسخه جدید:\n افزودن کانفینگ های جدید"
 }

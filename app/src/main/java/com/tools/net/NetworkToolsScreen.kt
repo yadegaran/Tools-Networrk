@@ -15,8 +15,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -29,10 +27,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.ErrorRed
+import com.tools.net.ui.theme.SuccessGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -45,10 +46,14 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
-    var publicIpText by remember { mutableStateOf<String>("در حال دریافت...") }
+    val fetchingIpLabel = stringResource(R.string.net_tools_fetching_ip)
+    val notTestedLabel = stringResource(R.string.net_tools_not_tested)
+    val scanningLabel = stringResource(R.string.net_tools_mtu_scanning)
+
+    var publicIpText by remember { mutableStateOf(fetchingIpLabel) }
     var localIpText by remember { mutableStateOf<String>(fetchInternalWifiIp()) }
 
-    var ipLeakDetail by remember { mutableStateOf<String>("تست نشده") }
+    var ipLeakDetail by remember { mutableStateOf(notTestedLabel) }
     var dnsServerList by remember { mutableStateOf<List<String>>(emptyList()) }
     var isLeakTesting by remember { mutableStateOf<Boolean>(false) }
 
@@ -69,7 +74,7 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
             .verticalScroll(scrollState)
     ) {
         Text(
-            "تست شبکه",
+            stringResource(R.string.net_tools_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -77,28 +82,32 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
         Spacer(modifier = Modifier.height(20.dp))
 
         // ۱. اطلاعات IP
-        ToolCard(title = "اطلاعات شبکه") {
-            InfoRow("آی‌پی داخلی:", localIpText)
+        ToolCard(title = stringResource(R.string.net_tools_info_title)) {
+            InfoRow(stringResource(R.string.net_tools_local_ip), localIpText)
             Divider(modifier = Modifier.padding(vertical = 8.dp))
-            InfoRow("آی‌پی عمومی:", publicIpText)
+            InfoRow(stringResource(R.string.net_tools_public_ip), publicIpText)
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // ۲. تست نشت با متد مولتی‌سورس
-        ToolCard(title = "تست نشت هویت (Leak Test)") {
-            Text("وضعیت نشت IP:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+        ToolCard(title = stringResource(R.string.net_tools_leak_title)) {
+            Text(stringResource(R.string.net_tools_leak_status_label), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             Text(
                 ipLeakDetail,
                 fontSize = 12.sp,
-                color = if (ipLeakDetail.contains("ایران")) Color.Red else Color(0xFF388E3C)
+                color = if (ipLeakDetail.contains("ایران")) ErrorRed else SuccessGreen
             )
 
             Divider(modifier = Modifier.padding(vertical = 12.dp))
 
-            Text("سرورهای DNS شناسایی شده:", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+            Text(stringResource(R.string.net_tools_dns_detected_label), fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             if (dnsServerList.isEmpty()) {
-                Text("داده‌ای یافت نشد. تست را شروع کنید.", fontSize = 11.sp, color = Color.Gray)
+                Text(
+                    stringResource(R.string.net_tools_dns_empty),
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             } else {
                 dnsServerList.forEach { dns ->
                     Text("• $dns", fontSize = 11.sp, lineHeight = 16.sp)
@@ -119,44 +128,44 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
                 modifier = Modifier.fillMaxWidth(),
                 enabled = !isLeakTesting
             ) {
-                Text(if (isLeakTesting) "در حال بررسی..." else "تست نشت هویت")
+                Text(if (isLeakTesting) stringResource(R.string.net_tools_leak_checking) else stringResource(R.string.net_tools_leak_action))
             }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
         // ۳. MTU Finder واقعی با UDP Packet Test
-        ToolCard(title = "یافتن بهترین MTU") {
+        ToolCard(title = stringResource(R.string.net_tools_mtu_title)) {
             Text(
-                "تست لایه ۴ برای یافتن حداکثر اندازه پکت بدون شکستگی.",
+                stringResource(R.string.net_tools_mtu_desc),
                 fontSize = 11.sp,
-                color = Color.Gray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(modifier = Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp))
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    if (isMtuRunning) "تست $currentMtuStep..." else bestMtuValue,
+                    if (isMtuRunning) stringResource(R.string.net_tools_mtu_testing, currentMtuStep) else bestMtuValue,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (bestMtuValue == "1500") Color.Gray else Color(0xFF2E7D32)
+                    color = if (bestMtuValue == "1500") MaterialTheme.colorScheme.onSurfaceVariant else SuccessGreen
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
             Button(onClick = {
                 isMtuRunning = true
-                bestMtuValue = "در حال اسکن..."
+                bestMtuValue = scanningLabel
                 scope.launch {
                     bestMtuValue = runRealMtuTest("8.8.8.8") { currentMtuStep = it }
                     isMtuRunning = false
                 }
             }, modifier = Modifier.fillMaxWidth(), enabled = !isMtuRunning) {
-                Text("شروع اسکن MTU")
+                Text(stringResource(R.string.net_tools_mtu_action))
             }
         }
     }
@@ -301,14 +310,9 @@ fun fetchInternalWifiIp(): String {
 
 @Composable
 fun ToolCard(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color(0xFF3949AB))
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.primary)
             Spacer(modifier = Modifier.height(10.dp))
             content()
         }
@@ -318,7 +322,7 @@ fun ToolCard(title: String, content: @Composable ColumnScope.() -> Unit) {
 @Composable
 fun InfoRow(label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Text(label, fontSize = 12.sp, color = Color.Gray)
+        Text(label, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(value, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }

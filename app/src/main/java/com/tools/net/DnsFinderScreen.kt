@@ -17,8 +17,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -33,12 +31,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.ErrorRed
+import com.tools.net.ui.theme.SuccessGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -57,14 +58,14 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
     var results by remember { mutableStateOf<List<DnsResult>>(emptyList()) }
     var isScanning by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf(0f) }
-    var statusText by remember { mutableStateOf("آماده اسکن") }
+    var statusText by remember { mutableStateOf(context.getString(R.string.dns_status_ready)) }
     var testDomain by remember { mutableStateOf("www.github.com") }
 
     Column(modifier = Modifier
         .fillMaxSize()
         .padding(16.dp)) {
         Text(
-            "DNS یاب هوشمند",
+            stringResource(R.string.dns_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
@@ -75,7 +76,7 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
             value = testDomain,
             onValueChange = { testDomain = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("دامنه تست (بدون http)") },
+            label = { Text(stringResource(R.string.dns_domain_label)) },
             shape = RoundedCornerShape(12.dp),
             singleLine = true,
             enabled = !isScanning
@@ -89,14 +90,14 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
-                    .background(Color.LightGray, RoundedCornerShape(4.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp)),
                 color = MaterialTheme.colorScheme.primary
             )
             Text(
                 statusText,
                 modifier = Modifier.padding(vertical = 8.dp),
                 fontSize = 13.sp,
-                color = Color.DarkGray
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
@@ -117,7 +118,7 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
                                 }
                             results = testResults.take(10)
                             isScanning = false
-                            statusText = "پایان اسکن"
+                            statusText = context.getString(R.string.dns_status_done)
                         }
                     }
                 },
@@ -127,8 +128,10 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
                 shape = RoundedCornerShape(12.dp),
                 enabled = !isScanning
             ) {
-                // جایگزینی آیکون با متن فارسی
-                Text(if (isScanning) "در حال تست..." else "شروع تست", fontWeight = FontWeight.Bold)
+                Text(
+                    if (isScanning) stringResource(R.string.dns_action_running) else stringResource(R.string.dns_action_start),
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             if (results.isNotEmpty()) {
@@ -136,12 +139,12 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
                     onClick = {
                         val allDns = results.joinToString("\n") { it.ip }
                         clipboard.setPrimaryClip(ClipData.newPlainText("All DNS", allDns))
-                        Toast.makeText(context, "هر ۱۰ مورد کپی شد", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.dns_copy_all_done), Toast.LENGTH_SHORT).show()
                     },
                     modifier = Modifier.height(55.dp),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("کپی همه", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.dns_copy_all_action), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -163,12 +166,7 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
 fun DnsCard(res: DnsResult, context: Context) {
     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(3.dp),
-        shape = RoundedCornerShape(12.dp)
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .padding(16.dp)
@@ -181,26 +179,25 @@ fun DnsCard(res: DnsResult, context: Context) {
                     text = res.ip,
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 18.sp,
-                    color = Color(0xFF1A237E),
-                    textAlign = TextAlign.Left
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Start
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "تأخیر: ${res.latency} میلی‌ثانیه",
+                    text = stringResource(R.string.dns_latency_label, res.latency),
                     fontSize = 13.sp,
-                    color = if (res.latency < 150) Color(0xFF2E7D32) else Color(0xFFD84315)
+                    color = if (res.latency < 150) SuccessGreen else ErrorRed
                 )
             }
 
-            // جایگزینی IconButton با TextButton برای نمایش عبارت "کپی"
             TextButton(
                 onClick = {
                     clipboard.setPrimaryClip(ClipData.newPlainText("DNS IP", res.ip))
-                    Toast.makeText(context, "کپی شد: ${res.ip}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.dns_copy_done, res.ip), Toast.LENGTH_SHORT).show()
                 },
-                modifier = Modifier.background(Color(0xFFF5F5F5), RoundedCornerShape(8.dp))
+                modifier = Modifier.background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
             ) {
-                Text("کپی", fontWeight = FontWeight.Bold, color = Color.Blue)
+                Text(stringResource(R.string.dns_copy_action), fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -227,15 +224,15 @@ suspend fun runAdvancedDnsTest(
 
             testSubset.forEachIndexed { index, dnsIp ->
                 val trimmedDns = dnsIp.trim()
-                onUpdate((index + 1).toFloat() / total, "بررسی: $trimmedDns")
+                onUpdate((index + 1).toFloat() / total, context.getString(R.string.dns_status_checking, trimmedDns))
 
                 val startTime = System.currentTimeMillis()
 
                 try {
-                    // ۱. تست لایه اتصال (TCP Handshake)
-                    val socket = Socket()
-                    socket.connect(InetSocketAddress(trimmedDns, 53), 750)
-                    socket.close()
+                    // ۱. تست لایه اتصال (TCP Handshake) - سوکت در finally بسته می‌شود تا در صورت تایم‌اوت لیک نکند
+                    Socket().use { socket ->
+                        socket.connect(InetSocketAddress(trimmedDns, 53), 750)
+                    }
 
                     // ۲. تست لایه رزولوشن (DNS Query)
                     // توجه: InetAddress.getByName در اندروید به تنهایی اجازه تعیین سرور DNS را نمی‌دهد.

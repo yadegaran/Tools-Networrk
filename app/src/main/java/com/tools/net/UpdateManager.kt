@@ -72,9 +72,9 @@ class UpdateManager {
             try {
                 val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
                 context.startActivity(intent)
-                Toast.makeText(context, "در حال انتقال به مرورگر...", Toast.LENGTH_LONG).show()
+                Toast.makeText(context, context.getString(R.string.update_opening_browser), Toast.LENGTH_LONG).show()
             } catch (e: Exception) {
-                Toast.makeText(context, "خطا در باز کردن لینک دانلود!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, context.getString(R.string.update_link_error), Toast.LENGTH_SHORT).show()
             }
         }
     }

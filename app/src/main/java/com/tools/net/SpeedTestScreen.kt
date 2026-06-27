@@ -19,10 +19,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,9 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.BrandPurple
+import com.tools.net.ui.theme.InfoBlue
+import com.tools.net.ui.theme.SuccessGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,9 +57,13 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
     val scope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
+    val fetchingLabel = stringResource(R.string.speed_fetching)
+    val locatingLabel = stringResource(R.string.speed_locating)
+    val updatingLabel = stringResource(R.string.speed_updating)
+
     // اطلاعات هویتی
-    var ipInfoText by remember { mutableStateOf("در حال دریافت...") }
-    var locationText by remember { mutableStateOf("در حال شناسایی...") }
+    var ipInfoText by remember { mutableStateOf(fetchingLabel) }
+    var locationText by remember { mutableStateOf(locatingLabel) }
 
     // مقادیر تست
     var isTesting by remember { mutableStateOf(false) }
@@ -68,7 +76,7 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
     // متد v2ray برای دریافت سریع اطلاعات شبکه
     fun refreshNetworkInfo() {
         scope.launch(Dispatchers.IO) {
-            ipInfoText = "در حال بروزرسانی..."
+            ipInfoText = updatingLabel
             val providers =
                 listOf("https://ipapi.co/json/", "https://api.myip.com", "https://ip-api.com/json")
             providers.forEach { url ->
@@ -107,17 +115,20 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("آنالیز پیشرفته شبکه", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            IconButton(onClick = { refreshNetworkInfo() }) { Icon(Icons.Default.Refresh, null) }
+            Text(stringResource(R.string.speed_title), fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            IconButton(onClick = { refreshNetworkInfo() }) {
+                Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.speed_refresh_action))
+            }
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F3F4))
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {
-                Text("آی‌پی: $ipInfoText", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                Text("موقعیت: $locationText", fontSize = 12.sp, color = Color.Gray)
+                Text(stringResource(R.string.speed_ip_label, ipInfoText), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.speed_location_label, locationText),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
 
@@ -126,10 +137,7 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
         Spacer(modifier = Modifier.height(20.dp))
 
         // بخش پینگ، جیتر و پکت‌لاست (مشابه v2ray)
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA))
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -149,8 +157,8 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            ResultCard("Download", downloadSpeed, Color(0xFF4CAF50), Modifier.weight(1f))
-            ResultCard("Upload", uploadSpeed, Color(0xFF2196F3), Modifier.weight(1f))
+            ResultCard(stringResource(R.string.speed_download_label), downloadSpeed, SuccessGreen, Modifier.weight(1f))
+            ResultCard(stringResource(R.string.speed_upload_label), uploadSpeed, InfoBlue, Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -180,7 +188,7 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
             enabled = !isTesting,
             shape = RoundedCornerShape(12.dp)
         ) {
-            Text(if (isTesting) "در حال آنالیز..." else "شروع تست سرعت")
+            Text(if (isTesting) stringResource(R.string.speed_running) else stringResource(R.string.speed_start_action))
         }
     }
 }
@@ -188,17 +196,14 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
 @Composable
 fun StatusItem(label: String, value: String, unit: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, fontSize = 11.sp, color = Color.Gray)
+        Text(label, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text("$value $unit", fontSize = 15.sp, fontWeight = FontWeight.Bold)
     }
 }
 
 @Composable
 fun ResultCard(label: String, value: Double, color: Color, modifier: Modifier) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = color.copy(alpha = 0.1f))
-    ) {
+    GlassCard(modifier = modifier) {
         Column(
             modifier = Modifier.padding(12.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -218,17 +223,18 @@ fun ResultCard(label: String, value: Double, color: Color, modifier: Modifier) {
 @Composable
 fun SpeedGauge(speed: Float) {
     val animatedSpeed by animateFloatAsState(targetValue = speed, animationSpec = tween(500))
+    val trackColor = MaterialTheme.colorScheme.surfaceVariant
     Box(contentAlignment = Alignment.Center, modifier = Modifier.size(200.dp)) {
         Canvas(modifier = Modifier.size(180.dp)) {
             drawArc(
-                Color.LightGray.copy(0.2f),
+                trackColor,
                 135f,
                 270f,
                 false,
                 style = Stroke(14.dp.toPx(), cap = StrokeCap.Round)
             )
             drawArc(
-                Color(0xFF6200EE),
+                BrandPurple,
                 135f,
                 (animatedSpeed.coerceIn(0f, 100f) / 100f) * 270f,
                 false,
@@ -253,9 +259,12 @@ suspend fun runDetailedNetworkStats(host: String): Triple<String, String, String
                     URL("https://1.1.1.1/cdn-cgi/trace").openConnection() as HttpURLConnection
                 conn.connectTimeout = 2000
                 conn.readTimeout = 2000
-                conn.inputStream.read()
-                conn.disconnect()
-                true
+                try {
+                    conn.inputStream.read()
+                    true
+                } finally {
+                    conn.disconnect()
+                }
             } catch (e: Exception) {
                 false
             }

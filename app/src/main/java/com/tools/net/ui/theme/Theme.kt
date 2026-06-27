@@ -1,53 +1,63 @@
 package com.tools.net.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
+
+enum class AppThemeMode { SYSTEM, LIGHT, DARK }
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = BrandBlueDark,
+    onPrimary = Color(0xFF02316B),
+    primaryContainer = Color(0xFF1E3A66),
+    onPrimaryContainer = Color(0xFFD6E4FF),
+    secondary = BrandCyan,
+    tertiary = BrandPurple,
+    background = DarkBackground,
+    onBackground = DarkOnSurface,
+    surface = DarkSurface,
+    onSurface = DarkOnSurface,
+    surfaceVariant = DarkSurfaceVariant,
+    onSurfaceVariant = DarkOnSurfaceVariant,
+    error = ErrorRed,
+    outline = Color(0xFF3A4252)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
+    primary = BrandBlue,
     onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+    primaryContainer = Color(0xFFDCE8FF),
+    onPrimaryContainer = Color(0xFF0A3A8C),
+    secondary = BrandCyan,
+    tertiary = BrandPurple,
+    background = LightBackground,
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    error = ErrorRed,
+    outline = Color(0xFFD3D9E3)
 )
+
+/** آیا تم فعلی تاریک است؛ بر اساس انتخاب کاربر یا تنظیمات سیستم. */
+@Composable
+fun AppThemeMode.resolveIsDark(): Boolean = when (this) {
+    AppThemeMode.SYSTEM -> isSystemInDarkTheme()
+    AppThemeMode.LIGHT -> false
+    AppThemeMode.DARK -> true
+}
 
 @Composable
 fun CleanIpCloudTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
+    val darkTheme = themeMode.resolveIsDark()
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

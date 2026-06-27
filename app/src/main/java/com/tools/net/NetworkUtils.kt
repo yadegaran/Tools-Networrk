@@ -20,7 +20,11 @@ object NetworkUtils {
                 conn.readTimeout = 1000
                 conn.setRequestProperty("Host", "browserleaks.com") // ترفند برای عبور از بلاک
 
-                val text = conn.inputStream.bufferedReader().readText()
+                val text = try {
+                    conn.inputStream.bufferedReader().use { it.readText() }
+                } finally {
+                    conn.disconnect()
+                }
                 val colo =
                     text.lineSequence().firstOrNull { it.startsWith("colo=") }?.split("=")?.get(1)
                         ?: "N/A"
@@ -36,20 +40,20 @@ object NetworkUtils {
 
     suspend fun checkDataExchange(ip: String, port: Int): String = withContext(Dispatchers.IO) {
         try {
-            val socket = Socket()
-            socket.connect(InetSocketAddress(ip, port), 1500)
-            socket.soTimeout = 1500
-            val output = socket.getOutputStream()
-            val input = socket.getInputStream()
+            Socket().use { socket ->
+                socket.connect(InetSocketAddress(ip, port), 1500)
+                socket.soTimeout = 1500
+                val output = socket.getOutputStream()
+                val input = socket.getInputStream()
 
-            // ارسال یک درخواست بسیار سبک
-            output.write("GET /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\n\r\n".toByteArray())
+                // ارسال یک درخواست بسیار سبک
+                output.write("GET /cdn-cgi/trace HTTP/1.1\r\nHost: cloudflare.com\r\n\r\n".toByteArray())
 
-            val buffer = ByteArray(1024)
-            val bytesRead = input.read(buffer)
+                val buffer = ByteArray(1024)
+                val bytesRead = input.read(buffer)
 
-            socket.close()
-            if (bytesRead > 0) "تبادل موفق" else "بدون پاسخ"
+                if (bytesRead > 0) "تبادل موفق" else "بدون پاسخ"
+            }
         } catch (e: Exception) {
             "خطای تبادل"
         }

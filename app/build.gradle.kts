@@ -13,8 +13,8 @@ android {
         applicationId = "com.tools.net"
         minSdk = 24
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.0.10"
+        versionCode = 11
+        versionName = "1.0.11"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -73,6 +73,9 @@ dependencies {
     implementation(libs.androidx.material3)
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.androidx.datastore.preferences)
+    implementation("androidx.compose.material:material-icons-extended:1.6.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.1")
     // تست‌ها
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,6 +1,6 @@
 {
-  "versionCode": 10,
-  "versionName": "1.0.10",
+  "versionCode": 11,
+  "versionName": "1.0.11",
   "downloadUrl": "https://github.com/yadegaran/Tools-Networrk/releases/latest/download/app.apk",
-  "changeLog": "تغییرات نسخه جدید:\n افزودن کانفینگ های جدید"
+  "changeLog": "تغییرات نسخه ۱.۰.۱۱:\n- پشتیبانی کامل از حالت تاریک و روشن (با سوییچ در منو)\n- طراحی جدید و شیشه‌ای (Glassmorphism) برای تمام صفحات\n- رفع چند باگ نشت حافظه/اتصال در اسکنر، DNS یاب و تست شبکه\n- بهبود خوانایی و ثبات متون در سراسر برنامه"
 }

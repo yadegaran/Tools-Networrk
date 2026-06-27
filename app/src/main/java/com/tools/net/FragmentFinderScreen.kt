@@ -3,7 +3,6 @@ package com.tools.net
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +21,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -34,10 +31,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.ErrorRed
+import com.tools.net.ui.theme.SuccessGreen
+import com.tools.net.ui.theme.WarningOrange
 
 @Composable
 fun FragmentFinderScreen(vm: ScannerViewModel) {
@@ -46,13 +48,10 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // --- هدر صفحه ---
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-        ) {
+        GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("فرگمنت یاب حرفه‌ای", fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
-                Text("خروجی بازه‌ای مخصوص V2Ray", fontSize = 12.sp)
+                Text(stringResource(R.string.fragment_title), fontSize = 20.sp, fontWeight = FontWeight.ExtraBold)
+                Text(stringResource(R.string.fragment_subtitle), fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
 
@@ -71,17 +70,17 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
             ) {
                 Icon(Icons.Default.Search, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(if (vm.isScanningg) "در حال اسکن..." else "شروع اسکن")
+                Text(if (vm.isScanningg) stringResource(R.string.fragment_scanning) else stringResource(R.string.fragment_start_action))
             }
 
             // نمایش دکمه توقف فقط در زمان اسکن
             AnimatedVisibility(visible = vm.isScanningg) {
                 Button(
                     onClick = { vm.stopScan() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    colors = ButtonDefaults.buttonColors(containerColor = ErrorRed),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("توقف", color = Color.White)
+                    Text(stringResource(R.string.fragment_stop_action), color = Color.White)
                 }
             }
         }
@@ -92,7 +91,7 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
                 LinearProgressIndicator(
                     progress = vm.currentProgress,
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (vm.isScanningg) MaterialTheme.colorScheme.primary else Color.Gray
+                    color = if (vm.isScanningg) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -100,7 +99,7 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.align(Alignment.CenterHorizontally),
-                    color = if (vm.isScanningg) MaterialTheme.colorScheme.primary else Color.Red
+                    color = if (vm.isScanningg) MaterialTheme.colorScheme.primary else ErrorRed
                 )
             }
         }
@@ -108,15 +107,16 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
         Spacer(modifier = Modifier.height(8.dp))
 
         // --- لیست نتایج ---
-        Text("نتایج یافت شده (برای کپی کلیک کنید):", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.fragment_results_title), fontSize = 14.sp, fontWeight = FontWeight.Bold)
 
         LazyColumn(modifier = Modifier.fillMaxSize().padding(top = 8.dp)) {
             items(vm.scanResults) { result ->
+                val copiedLabel = stringResource(R.string.fragment_copied)
                 FragmentResultItem(result) {
                     // کپی کردن به فرمت V2Ray
-                    val copyText = "Length: ${result.lengthRange} | Interval: ${result.intervalRange}"
+                    val copyText = context.getString(R.string.fragment_copy_format, result.lengthRange, result.intervalRange)
                     clipboardManager.setText(AnnotatedString(copyText))
-                    Toast.makeText(context, "کپی شد!", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, copiedLabel, Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -125,13 +125,11 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
 
 @Composable
 fun FragmentResultItem(result: FragmentResult, onClick: () -> Unit) {
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F3F4))
+            .padding(vertical = 4.dp),
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -142,7 +140,7 @@ fun FragmentResultItem(result: FragmentResult, onClick: () -> Unit) {
                 modifier = Modifier
                     .size(45.dp)
                     .background(
-                        if (result.stability > 80) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                        if (result.stability > 80) SuccessGreen else WarningOrange,
                         RoundedCornerShape(8.dp)
                     ),
                 contentAlignment = Alignment.Center
@@ -153,13 +151,21 @@ fun FragmentResultItem(result: FragmentResult, onClick: () -> Unit) {
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text("اندازه: ${result.lengthRange}", fontWeight = FontWeight.Bold)
-                Text("فاصله: ${result.intervalRange}", fontSize = 12.sp, color = Color.Gray)
+                Text(stringResource(R.string.fragment_size_label, result.lengthRange), fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.fragment_interval_label, result.intervalRange),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
 
             Column(horizontalAlignment = Alignment.End) {
-                Text("${result.latency}ms", color = Color(0xFF1976D2), fontWeight = FontWeight.Bold)
-                Text("پینگ", fontSize = 10.sp, color = Color.Gray)
+                Text("${result.latency}ms", color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                Text(
+                    stringResource(R.string.fragment_ping_label),
+                    fontSize = 10.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

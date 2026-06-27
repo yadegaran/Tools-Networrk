@@ -18,10 +18,14 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -44,11 +48,11 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -60,45 +64,55 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.tools.net.ui.components.GlassAppBackground
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.AppThemeMode
+import com.tools.net.ui.theme.CleanIpCloudTheme
+import com.tools.net.ui.theme.ThemePreferences
 import kotlinx.coroutines.launch
 
-sealed class Screen(val route: String, val title: String, val icon: ImageVector) {
-    data object ScannerHome : Screen("scanner", "اسکنر ای پی", Icons.Default.Search)
-    data object Converter : Screen("converter", "مبدل کانفیگ", Icons.Default.Build)
-    data object DnsFinder : Screen("dns", "DNS یاب", Icons.Default.Refresh) // تغییر آیکون
-    data object NetworkTools : Screen("tools", "تست شبکه", Icons.Default.Settings) // تغییر آیکون
-    data object SpeedTest : Screen("speed", "تست سرعت", Icons.Default.PlayArrow)
-    data object FreeConfigs :
-        Screen("free_configs", "کانفیگ رایگان", Icons.Default.Menu) // تغییر آیکون
-
-    data object FragmentFinder : Screen("fragment_finder", "فرگمنت یاب", Icons.Default.Build)
-    data object SupportScreen :
-        Screen("support", "عیب یابی", Icons.Default.Info) // تغییر مسیر و آیکون
+sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
+    data object ScannerHome : Screen("scanner", R.string.nav_scanner, Icons.Default.Search)
+    data object Converter : Screen("converter", R.string.nav_converter, Icons.Default.Build)
+    data object DnsFinder : Screen("dns", R.string.nav_dns_finder, Icons.Default.Refresh)
+    data object NetworkTools : Screen("tools", R.string.nav_network_tools, Icons.Default.Settings)
+    data object FreeConfigs : Screen("free_configs", R.string.nav_free_configs, Icons.Default.Menu)
+    data object SpeedTest : Screen("speed", R.string.nav_speed_test, Icons.Default.PlayArrow)
+    data object FragmentFinder : Screen("fragment_finder", R.string.nav_fragment_finder, Icons.Default.Build)
+    data object SupportScreen : Screen("support", R.string.nav_support, Icons.Default.Info)
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val vm = ScannerViewModel()
         setContent {
-            val customColorScheme = lightColorScheme(
-                primary = Color(0xFF1976D2),
-                onPrimary = Color.White,
-                primaryContainer = Color(0xFFE3F2FD),
-                surface = Color(0xFFF8F9FA)
-            )
+            val vm: ScannerViewModel = viewModel()
+            val context = LocalContext.current
+            val scope = rememberCoroutineScope()
+            val themeMode by ThemePreferences.themeModeFlow(context)
+                .collectAsState(initial = AppThemeMode.SYSTEM)
 
-            MaterialTheme(colorScheme = customColorScheme) {
+            CleanIpCloudTheme(themeMode = themeMode) {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
-                    MainNavigationApp(vm)
+                    GlassAppBackground {
+                        MainNavigationApp(
+                            vm = vm,
+                            themeMode = themeMode,
+                            onThemeModeChange = { mode ->
+                                scope.launch { ThemePreferences.setThemeMode(context, mode) }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -107,13 +121,16 @@ class MainActivity : ComponentActivity() {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainNavigationApp(vm: ScannerViewModel) {
+fun MainNavigationApp(
+    vm: ScannerViewModel,
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit
+) {
     val context = LocalContext.current
     val currentVersionCode = remember { UpdateManager.updateManager.getCurrentVersionCode(context) }
 
     var showDialog by remember { mutableStateOf(false) }
     var updateData by remember { mutableStateOf<UpdateInfo?>(null) }
-
 
     val navController = rememberNavController()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
@@ -146,13 +163,13 @@ fun MainNavigationApp(vm: ScannerViewModel) {
                 ) {
                     Column {
                         Text(
-                            "Tools Net",
+                            stringResource(R.string.app_name),
                             color = Color.White,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            "ابزار مدیریت شبکه",
+                            stringResource(R.string.app_slogan),
                             color = Color.White.copy(alpha = 0.8f),
                             fontSize = 12.sp
                         )
@@ -173,7 +190,7 @@ fun MainNavigationApp(vm: ScannerViewModel) {
                 Column(modifier = Modifier.weight(1f)) {
                     menuItems.forEach { screen ->
                         NavigationDrawerItem(
-                            label = { Text(screen.title) },
+                            label = { Text(stringResource(screen.titleRes)) },
                             selected = false,
                             icon = {
                                 Icon(
@@ -195,6 +212,8 @@ fun MainNavigationApp(vm: ScannerViewModel) {
                 }
                 Divider(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp))
 
+                ThemeModeSelector(themeMode = themeMode, onThemeModeChange = onThemeModeChange)
+
                 Column(modifier = Modifier.padding(bottom = 12.dp)) {
                     UpdateMenuItem(currentVersionCode) { info ->
                         updateData = info
@@ -206,11 +225,12 @@ fun MainNavigationApp(vm: ScannerViewModel) {
         }
     ) {
         Scaffold(
+            containerColor = Color.Transparent,
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {
                         Text(
-                            "Tools Net",
+                            stringResource(R.string.app_name),
                             color = Color.White,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
@@ -218,17 +238,82 @@ fun MainNavigationApp(vm: ScannerViewModel) {
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Default.Menu, contentDescription = "منو", tint = Color.White)
+                            Icon(
+                                Icons.Default.Menu,
+                                contentDescription = stringResource(R.string.menu_content_description),
+                                tint = Color.White
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
                 )
             }
         ) { innerPadding ->
-            Surface(modifier = Modifier.padding(innerPadding)) {
+            Surface(modifier = Modifier.padding(innerPadding), color = Color.Transparent) {
                 AppNavHost(navController, vm)
             }
         }
+    }
+}
+
+@Composable
+private fun ThemeModeSelector(
+    themeMode: AppThemeMode,
+    onThemeModeChange: (AppThemeMode) -> Unit
+) {
+    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Text(
+            stringResource(R.string.theme_section_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            ThemeOptionChip(
+                icon = Icons.Default.PhoneAndroid,
+                label = stringResource(R.string.theme_system),
+                selected = themeMode == AppThemeMode.SYSTEM,
+                onClick = { onThemeModeChange(AppThemeMode.SYSTEM) },
+                modifier = Modifier.weight(1f)
+            )
+            ThemeOptionChip(
+                icon = Icons.Default.LightMode,
+                label = stringResource(R.string.theme_light),
+                selected = themeMode == AppThemeMode.LIGHT,
+                onClick = { onThemeModeChange(AppThemeMode.LIGHT) },
+                modifier = Modifier.weight(1f)
+            )
+            ThemeOptionChip(
+                icon = Icons.Default.DarkMode,
+                label = stringResource(R.string.theme_dark),
+                selected = themeMode == AppThemeMode.DARK,
+                onClick = { onThemeModeChange(AppThemeMode.DARK) },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ThemeOptionChip(
+    icon: ImageVector,
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant
+    val contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .clickable(onClick = onClick)
+            .background(containerColor, RoundedCornerShape(14.dp))
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(icon, contentDescription = label, tint = contentColor, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(label, fontSize = 10.sp, color = contentColor)
     }
 }
 
@@ -239,18 +324,18 @@ fun UpdateMenuItem(currentVersionCode: Int, onUpdateFound: (UpdateInfo) -> Unit)
 
     var isChecking by remember { mutableStateOf(false) }
     var hasUpdate by remember { mutableStateOf(false) }
-    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     val currentVersionName = remember { UpdateManager.updateManager.getAppVersionName(context) }
 
-    // بررسی اولیه موقع باز شدن منو
     LaunchedEffect(Unit) {
         val info = UpdateManager.updateManager.fetchUpdateInfo()
         if (info != null && info.versionCode > currentVersionCode) {
-            updateInfo = info
             hasUpdate = true
-            Toast.makeText(context, "سرور: ${info.versionCode} | شما: $currentVersionCode", Toast.LENGTH_LONG).show()
+            Toast.makeText(
+                context,
+                context.getString(R.string.update_server_vs_local, info.versionCode, currentVersionCode),
+                Toast.LENGTH_LONG
+            ).show()
         }
-
     }
 
     Row(
@@ -259,20 +344,17 @@ fun UpdateMenuItem(currentVersionCode: Int, onUpdateFound: (UpdateInfo) -> Unit)
             .clickable(enabled = !isChecking) {
                 scope.launch {
                     isChecking = true
-                    // نمایش پیغام برای شروع بررسی دستی
-                    Toast.makeText(context, "در حال بررسی نسخه جدید...", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.update_checking_toast), Toast.LENGTH_SHORT).show()
 
                     val info = UpdateManager.updateManager.fetchUpdateInfo()
                     isChecking = false
 
                     if (info != null && info.versionCode > currentVersionCode) {
-                        updateInfo = info
                         hasUpdate = true
-                        // باز کردن دیالوگ اصلی
                         onUpdateFound(info)
                     } else {
                         hasUpdate = false
-                        Toast.makeText(context, "شما از آخرین نسخه استفاده می‌کنید.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.update_latest_toast), Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -282,15 +364,23 @@ fun UpdateMenuItem(currentVersionCode: Int, onUpdateFound: (UpdateInfo) -> Unit)
         Icon(
             Icons.Default.Refresh,
             contentDescription = null,
-            tint = if (hasUpdate) Color(0xFF4CAF50) else Color.Gray
+            tint = if (hasUpdate) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.width(12.dp))
         Column {
-            Text("نسخه $currentVersionName", fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Text(
-                text = if (isChecking) "در حال بررسی..." else if (hasUpdate) "نسخه جدید یافت شد!" else "بررسی به‌روزرسانی",
+                stringResource(R.string.update_version_label, currentVersionName),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = when {
+                    isChecking -> stringResource(R.string.update_checking)
+                    hasUpdate -> stringResource(R.string.update_found)
+                    else -> stringResource(R.string.update_check_action)
+                },
                 fontSize = 11.sp,
-                color = if (hasUpdate) Color(0xFF4CAF50) else Color.Gray
+                color = if (hasUpdate) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -301,7 +391,7 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
     val context = LocalContext.current
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("نسخه جدید در دسترس است!", fontWeight = FontWeight.Bold) },
+        title = { Text(stringResource(R.string.update_dialog_title), fontWeight = FontWeight.Bold) },
         text = { Text(updateInfo.changeLog) },
         confirmButton = {
             Button(
@@ -309,11 +399,11 @@ fun UpdateDialog(updateInfo: UpdateInfo, onDismiss: () -> Unit) {
                     UpdateManager.updateManager.startDownload(context, updateInfo.downloadUrl)
                     onDismiss()
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-            ) { Text("دانلود مستقیم") }
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) { Text(stringResource(R.string.update_dialog_download)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("فعلاً نه") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.update_dialog_dismiss)) }
         }
     )
 }
@@ -336,40 +426,37 @@ fun AppNavHost(navController: NavHostController, vm: ScannerViewModel) {
 fun GitHubMenuItem(context: Context) {
     val githubUrl = "https://github.com/yadegaran/Tools-Networrk"
 
-    Surface(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 4.dp),
-        color = Color.Transparent, // یا MaterialTheme.colorScheme.surfaceVariant برای پس‌زمینه ملایم
-        shape = MaterialTheme.shapes.medium
+        onClick = {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
+            context.startActivity(intent)
+        }
     ) {
         Row(
-            modifier = Modifier
-                .clickable {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(githubUrl))
-                    context.startActivity(intent)
-                }
-                .padding(12.dp),
+            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = Icons.Default.Build, // آیکون ابزار یا ساخت
+                imageVector = Icons.Default.Build,
                 contentDescription = null,
-                tint = Color(0xFF607D8B), // رنگ خاکستری-آبی (Steel Grey)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    text = "مشاهده سورس در گیت‌هاب",
+                    text = stringResource(R.string.github_source_title),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
                 )
                 Text(
-                    text = "github.com/yadegaran",
+                    text = stringResource(R.string.github_source_subtitle),
                     fontSize = 10.sp,
-                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }

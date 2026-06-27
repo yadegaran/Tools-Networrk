@@ -1,3 +1,169 @@
 <resources>
     <string name="app_name">Tools Net</string>
+
+    <!-- عمومی -->
+    <string name="app_slogan">ابزار مدیریت شبکه</string>
+    <string name="menu_content_description">منو</string>
+    <string name="action_close">بستن</string>
+    <string name="action_copy">کپی</string>
+    <string name="action_retry">تلاش دوباره</string>
+    <string name="action_start">شروع</string>
+    <string name="action_stop">توقف</string>
+    <string name="status_loading">در حال پردازش…</string>
+    <string name="status_empty">نتیجه‌ای یافت نشد</string>
+
+    <!-- منوی ناوبری -->
+    <string name="nav_scanner">اسکنر ای پی</string>
+    <string name="nav_converter">مبدل کانفیگ</string>
+    <string name="nav_dns_finder">DNS یاب</string>
+    <string name="nav_network_tools">تست شبکه</string>
+    <string name="nav_free_configs">کانفیگ رایگان</string>
+    <string name="nav_speed_test">تست سرعت</string>
+    <string name="nav_fragment_finder">فرگمنت یاب</string>
+    <string name="nav_support">عیب یابی</string>
+
+    <!-- تنظیمات تم -->
+    <string name="theme_section_title">ظاهر برنامه</string>
+    <string name="theme_system">پیش‌فرض سیستم</string>
+    <string name="theme_light">روشن</string>
+    <string name="theme_dark">تاریک</string>
+
+    <!-- بروزرسانی -->
+    <string name="update_checking">در حال بررسی…</string>
+    <string name="update_found">نسخه جدید یافت شد!</string>
+    <string name="update_check_action">بررسی به‌روزرسانی</string>
+    <string name="update_version_label">نسخه %1$s</string>
+    <string name="update_server_vs_local">سرور: %1$d | شما: %2$d</string>
+    <string name="update_checking_toast">در حال بررسی نسخه جدید…</string>
+    <string name="update_latest_toast">شما از آخرین نسخه استفاده می‌کنید.</string>
+    <string name="update_dialog_title">نسخه جدید در دسترس است!</string>
+    <string name="update_dialog_download">دانلود مستقیم</string>
+    <string name="update_dialog_dismiss">فعلاً نه</string>
+
+    <!-- گیت‌هاب -->
+    <string name="github_source_title">مشاهده سورس در گیت‌هاب</string>
+    <string name="github_source_subtitle">github.com/yadegaran</string>
+
+    <!-- مبدل کانفیگ -->
+    <string name="converter_title">دریافت و مبدل هوشمند</string>
+    <string name="converter_source_n">منبع %1$d</string>
+    <string name="converter_source_url_label">آدرس منبع کانفیگ</string>
+    <string name="converter_fetch_action">دریافت</string>
+    <string name="converter_fetch_failed">ارتباط برقرار نشد. لطفاً از اتصال اینترنت یا ابزار تغییر آی‌پی خود مطمئن شوید.</string>
+    <string name="converter_fetch_success">تعداد %1$d کانفیگ با موفقیت دریافت شد</string>
+    <string name="converter_target_ip_label">آی‌پی هدف (تمیز)</string>
+    <string name="converter_input_list_label">لیست ورودی</string>
+    <string name="converter_paste_action">چسباندن</string>
+    <string name="converter_convert_action">تبدیل و جایگزینی</string>
+    <string name="converter_target_ip_required">ابتدا آی‌پی هدف را مشخص کنید</string>
+    <string name="converter_no_valid_config">کانفیگ معتبری در لیست ورودی پیدا نشد.</string>
+    <string name="converter_success">عملیات تبدیل با موفقیت انجام شد</string>
+    <string name="converter_result_label">نتیجه نهایی</string>
+    <string name="converter_copy_all_action">کپی کُل</string>
+    <string name="converter_copied_clipboard">در کلیپ‌بورد کپی شد</string>
+
+    <!-- DNS یاب -->
+    <string name="dns_title">DNS یاب هوشمند</string>
+    <string name="dns_domain_label">دامنه تست (بدون http)</string>
+    <string name="dns_status_ready">آماده اسکن</string>
+    <string name="dns_status_checking">بررسی: %1$s</string>
+    <string name="dns_status_done">پایان اسکن</string>
+    <string name="dns_action_running">در حال تست…</string>
+    <string name="dns_action_start">شروع تست</string>
+    <string name="dns_copy_all_action">کپی همه</string>
+    <string name="dns_copy_all_done">هر ۱۰ مورد کپی شد</string>
+    <string name="dns_latency_label">تأخیر: %1$d میلی‌ثانیه</string>
+    <string name="dns_copy_action">کپی</string>
+    <string name="dns_copy_done">کپی شد: %1$s</string>
+
+    <!-- اسکنر آی‌پی -->
+    <string name="scanner_threads_label">ترد</string>
+    <string name="scanner_timeout_label">تایم‌اوت</string>
+    <string name="scanner_count_label">تعداد</string>
+    <string name="scanner_port_label">پورت هدف: %1$s</string>
+    <string name="scanner_ranges_title">انتخاب رنج‌های IP:</string>
+    <string name="scanner_select_all">انتخاب همه رنج‌ها</string>
+    <string name="scanner_stop_action">توقف اسکن</string>
+    <string name="scanner_start_action">شروع عملیات اسکن</string>
+    <string name="scanner_results_title">نتایج اسکن:</string>
+    <string name="scanner_latency_ms">%1$dms</string>
+    <string name="scanner_loss_label">Loss: %1$d%%</string>
+    <string name="scanner_location_label">%1$s لوکیشن: %2$s</string>
+    <string name="scanner_mtu_label">MTU: %1$s</string>
+    <string name="scanner_ip_copied">آی‌پی %1$s کپی و انتخاب شد</string>
+    <string name="scanner_exchange_success">تبادل موفق</string>
+
+    <!-- ابزارهای شبکه -->
+    <string name="net_tools_title">تست شبکه</string>
+    <string name="net_tools_fetching_ip">در حال دریافت…</string>
+    <string name="net_tools_not_tested">تست نشده</string>
+    <string name="net_tools_info_title">اطلاعات شبکه</string>
+    <string name="net_tools_local_ip">آی‌پی داخلی:</string>
+    <string name="net_tools_public_ip">آی‌پی عمومی:</string>
+    <string name="net_tools_leak_title">تست نشت هویت (Leak Test)</string>
+    <string name="net_tools_leak_status_label">وضعیت نشت IP:</string>
+    <string name="net_tools_dns_detected_label">سرورهای DNS شناسایی شده:</string>
+    <string name="net_tools_dns_empty">داده‌ای یافت نشد. تست را شروع کنید.</string>
+    <string name="net_tools_leak_checking">در حال بررسی…</string>
+    <string name="net_tools_leak_action">تست نشت هویت</string>
+    <string name="net_tools_mtu_title">یافتن بهترین MTU</string>
+    <string name="net_tools_mtu_desc">تست لایه ۴ برای یافتن حداکثر اندازه پکت بدون شکستگی.</string>
+    <string name="net_tools_mtu_testing">تست %1$d…</string>
+    <string name="net_tools_mtu_action">شروع اسکن MTU</string>
+    <string name="net_tools_mtu_scanning">در حال اسکن…</string>
+
+    <!-- تست سرعت -->
+    <string name="speed_title">آنالیز پیشرفته شبکه</string>
+    <string name="speed_refresh_action">بروزرسانی اطلاعات شبکه</string>
+    <string name="speed_fetching">در حال دریافت…</string>
+    <string name="speed_locating">در حال شناسایی…</string>
+    <string name="speed_updating">در حال بروزرسانی…</string>
+    <string name="speed_ip_label">آی‌پی: %1$s</string>
+    <string name="speed_location_label">موقعیت: %1$s</string>
+    <string name="speed_running">در حال آنالیز…</string>
+    <string name="speed_start_action">شروع تست سرعت</string>
+    <string name="speed_download_label">Download</string>
+    <string name="speed_upload_label">Upload</string>
+
+    <!-- فرگمنت یاب -->
+    <string name="fragment_title">فرگمنت یاب حرفه‌ای</string>
+    <string name="fragment_subtitle">خروجی بازه‌ای مخصوص V2Ray</string>
+    <string name="fragment_scanning">در حال اسکن…</string>
+    <string name="fragment_start_action">شروع اسکن</string>
+    <string name="fragment_stop_action">توقف</string>
+    <string name="fragment_results_title">نتایج یافت شده (برای کپی کلیک کنید):</string>
+    <string name="fragment_copy_format">Length: %1$s | Interval: %2$s</string>
+    <string name="fragment_copied">کپی شد!</string>
+    <string name="fragment_size_label">اندازه: %1$s</string>
+    <string name="fragment_interval_label">فاصله: %1$s</string>
+    <string name="fragment_ping_label">پینگ</string>
+
+    <!-- کانفیگ رایگان -->
+    <string name="free_title">دریافت کانفیگ رایگان</string>
+    <string name="free_source_mixed">ترکیبی</string>
+    <string name="free_source_all">همه</string>
+    <string name="free_source_n">منبع %1$d</string>
+    <string name="free_fetch_error">خطا در دریافت! باز کردن در مرورگر…</string>
+    <string name="free_copy_all_action">کپی همه موارد در حافظه</string>
+    <string name="free_copied_count">%1$d کانفیگ کپی شد</string>
+    <string name="free_empty_hint">یک منبع را از لیست بالا انتخاب کنید</string>
+    <string name="free_no_browser">مرورگری یافت نشد!</string>
+
+    <!-- پشتیبانی -->
+    <string name="support_title">پشتیبانی و عیب‌یابی هوشمند</string>
+    <string name="support_subtitle">اگر در اتصال مشکل دارید، از ابزار زیر استفاده کنید.</string>
+    <string name="support_faq_title">سوالات متداول (FAQ)</string>
+    <string name="support_doctor_title">پزشک شبکه</string>
+    <string name="support_doctor_subtitle">بررسی خودکار پارامترهای اصلی اتصال</string>
+    <string name="support_checking">در حال بررسی…</string>
+    <string name="support_start_analysis">شروع آنالیز هوشمند شبکه</string>
+    <string name="support_solution_title">راهکار پیشنهادی:</string>
+    <string name="support_solution_clock">ساعت گوشی شما با سرور هماهنگ نیست. لطفاً در تنظیمات گوشی، تیک \'Automatic Date &amp; Time\' را فعال کنید.</string>
+    <string name="support_solution_internet">اینترنت شما قطع است. وضعیت دیتا یا وای‌فای را چک کنید.</string>
+    <string name="support_solution_server">IP سرور پاسخ نمی‌دهد. احتمالاً بلاک شده است. از بخش اسکنر، \'فرگمنت\' مناسب پیدا کنید.</string>
+    <string name="support_solution_default">یکبار حالت هواپیما را روشن و خاموش کنید و دوباره امتحان کنید.</string>
+
+    <!-- مدیریت آپدیت -->
+    <string name="update_opening_browser">در حال انتقال به مرورگر…</string>
+    <string name="update_link_error">خطا در باز کردن لینک دانلود!</string>
 </resources>

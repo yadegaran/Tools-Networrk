@@ -3,7 +3,6 @@ package com.tools.net
 import android.content.ClipboardManager
 import android.content.Context
 import android.widget.Toast
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -23,8 +22,6 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenuItem
@@ -43,11 +40,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.ErrorRed
+import com.tools.net.ui.theme.SuccessGreen
+import com.tools.net.ui.theme.WarningOrange
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -78,21 +79,21 @@ fun ScannerApp(vm: ScannerViewModel) {
             OutlinedTextField(
                 value = threads,
                 onValueChange = { threads = it },
-                label = { Text("ترد", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.scanner_threads_label), fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
             OutlinedTextField(
                 value = timeout,
                 onValueChange = { timeout = it },
-                label = { Text("تایم‌اوت", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.scanner_timeout_label), fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
             OutlinedTextField(
                 value = maxResults,
                 onValueChange = { maxResults = it },
-                label = { Text("تعداد", fontSize = 11.sp) },
+                label = { Text(stringResource(R.string.scanner_count_label), fontSize = 11.sp) },
                 modifier = Modifier.weight(1f),
                 singleLine = true
             )
@@ -107,7 +108,7 @@ fun ScannerApp(vm: ScannerViewModel) {
             modifier = Modifier.fillMaxWidth()
         ) {
             OutlinedTextField(
-                value = "پورت هدف: $selectedPort",
+                value = stringResource(R.string.scanner_port_label, selectedPort),
                 onValueChange = {},
                 readOnly = true,
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -133,16 +134,14 @@ fun ScannerApp(vm: ScannerViewModel) {
 
         // ۳. باکس انتخاب رنج‌های IP
         Text(
-            "انتخاب رنج‌های IP:",
+            stringResource(R.string.scanner_ranges_title),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.primary
         )
-        Card(
+        GlassCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(140.dp),
-            border = BorderStroke(1.dp, Color(0xFFE0E0E0)),
-            colors = CardDefaults.cardColors(containerColor = Color.White)
+                .height(140.dp)
         ) {
             LazyColumn(modifier = Modifier.padding(4.dp)) {
                 item {
@@ -161,7 +160,7 @@ fun ScannerApp(vm: ScannerViewModel) {
                             checked = selectedRanges.size == vm.ipRanges.size,
                             onCheckedChange = null
                         )
-                        Text("انتخاب همه رنج‌ها", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.scanner_select_all), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
                 items(vm.ipRanges) { range ->
@@ -202,7 +201,7 @@ fun ScannerApp(vm: ScannerViewModel) {
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (vm.isScanning.value) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary
+                containerColor = if (vm.isScanning.value) ErrorRed else MaterialTheme.colorScheme.primary
             )
         ) {
             Icon(
@@ -211,14 +210,14 @@ fun ScannerApp(vm: ScannerViewModel) {
             )
             Spacer(Modifier.width(8.dp))
             Text(
-                if (vm.isScanning.value) "توقف اسکن" else "شروع عملیات اسکن",
+                if (vm.isScanning.value) stringResource(R.string.scanner_stop_action) else stringResource(R.string.scanner_start_action),
                 fontWeight = FontWeight.Bold
             )
         }
 
         // ۵. نمایش نتایج
         Text(
-            "نتایج اسکن:",
+            stringResource(R.string.scanner_results_title),
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp)
         )
@@ -238,136 +237,70 @@ fun ScannerApp(vm: ScannerViewModel) {
 }
 
 @Composable
-
 fun ScannerResultItem(res: IpScanResult, vm: ScannerViewModel) {
-
     val context = LocalContext.current
+    val successLabel = stringResource(R.string.scanner_exchange_success)
 
-    Card(
+    GlassCard(
+        modifier = Modifier.fillMaxWidth(),
+        onClick = {
+            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("IP", res.ip))
 
-        modifier = Modifier
+            // ذخیره در ViewModel برای صفحه مبدل
+            vm.selectedIpForConverter.value = res.ip
 
-            .fillMaxWidth()
-
-            .clickable {
-
-// کپی در حافظه
-
-                val clipboard =
-
-                    context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-
-                clipboard.setPrimaryClip(android.content.ClipData.newPlainText("IP", res.ip))
-
-
-// ذخیره در ViewModel برای صفحه مبدل
-
-                vm.selectedIpForConverter.value = res.ip
-
-
-
-                Toast
-
-                    .makeText(context, "آی‌پی ${res.ip} کپی و انتخاب شد", Toast.LENGTH_SHORT)
-
-                    .show()
-
-            },
-
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-
-        elevation = CardDefaults.cardElevation(2.dp)
-
-    ) {
-
-        Column(modifier = Modifier.padding(12.dp)) {
-
-            Row(
-
-                modifier = Modifier.fillMaxWidth(),
-
-                horizontalArrangement = Arrangement.SpaceBetween
-
-            ) {
-
-                Text("${res.ip}:${res.port}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                Column(horizontalAlignment = Alignment.End) {
-
-                    Text(
-
-                        "${res.latency}ms",
-
-                        color = if (res.latency < 500) Color(0xFF2E7D32) else Color(0xFFE65100),
-
-                        fontWeight = FontWeight.Black
-
-                    )
-
-                    Text(
-
-                        "Loss: ${res.packetLoss}%",
-
-                        color = if (res.packetLoss > 0) Color.Red else Color(0xFF2E7D32),
-
-                        fontSize = 10.sp
-
-                    )
-
-                }
-
-            }
-
-            Divider(
-
-                modifier = Modifier.padding(vertical = 8.dp),
-
-                thickness = 0.5.dp,
-
-                color = Color.LightGray
-
-            )
-
-            Row(
-
-                modifier = Modifier.fillMaxWidth(),
-
-                horizontalArrangement = Arrangement.SpaceBetween
-
-            ) {
-
-                Column {
-
-                    Text(
-
-                        "${countryCodeToFlag(res.countryCode)} لوکیشن: ${res.colo}",
-
-                        fontSize = 13.sp
-
-                    )
-
-                    Text("MTU: ${res.mtu}", fontSize = 11.sp, color = Color.Gray)
-
-                }
-
-                Text(
-
-                    res.exchangeStatus,
-
-                    color = if (res.exchangeStatus == "تبادل موفق") Color(0xFF2E7D32) else Color.Gray,
-
-                    fontWeight = FontWeight.Bold,
-
-                    fontSize = 13.sp
-
-                )
-
-            }
-
+            Toast.makeText(context, context.getString(R.string.scanner_ip_copied, res.ip), Toast.LENGTH_SHORT).show()
         }
-
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("${res.ip}:${res.port}", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        stringResource(R.string.scanner_latency_ms, res.latency),
+                        color = if (res.latency < 500) SuccessGreen else WarningOrange,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        stringResource(R.string.scanner_loss_label, res.packetLoss),
+                        color = if (res.packetLoss > 0) ErrorRed else SuccessGreen,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+            Divider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                thickness = 0.5.dp,
+                color = MaterialTheme.colorScheme.outline
+            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        stringResource(R.string.scanner_location_label, countryCodeToFlag(res.countryCode), res.colo),
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        stringResource(R.string.scanner_mtu_label, res.mtu.toString()),
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Text(
+                    res.exchangeStatus,
+                    color = if (res.exchangeStatus == successLabel) SuccessGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp
+                )
+            }
+        }
     }
-
 }
 
 fun countryCodeToFlag(code: String): String {

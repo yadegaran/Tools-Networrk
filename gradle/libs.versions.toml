@@ -10,6 +10,7 @@ activityCompose = "1.8.0"
 composeBom = "2023.08.00"
 material3Android = "1.2.1"
 androidthings = "1.0"
+datastorePreferences = "1.0.0"
 
 
 [libraries]
@@ -29,6 +30,7 @@ androidx-ui-test-junit4 = { group = "androidx.compose.ui", name = "ui-test-junit
 androidx-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-material3-android = { group = "androidx.compose.material3", name = "material3-android", version.ref = "material3Android" }
 androidthings = { group = "com.google.android.things", name = "androidthings", version.ref = "androidthings" }
+androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

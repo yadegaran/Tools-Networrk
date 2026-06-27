@@ -140,13 +140,13 @@ class ScannerViewModel : ViewModel() {
             for (i in 1..totalAttempts) {
                 val start = System.currentTimeMillis()
                 try {
-                    val socket = Socket()
-                    socket.connect(InetSocketAddress(ip, port), timeout)
-                    socket.close()
+                    Socket().use { socket ->
+                        socket.connect(InetSocketAddress(ip, port), timeout)
+                    }
                     successfulAttempts++
                     totalLatency += (System.currentTimeMillis() - start)
                 } catch (e: Exception) {
-                    // این تلاش شکست خورد
+                    // این تلاش شکست خورد - سوکت در use{} حتی روی استثنا بسته می‌شود
                 }
                 delay(20) // وقفه کوتاه بین هر پکت
             }
@@ -222,20 +222,20 @@ class ScannerViewModel : ViewModel() {
 
         try {
             repeat(retryCount) {
-                val socket = java.net.Socket()
-                socket.connect(java.net.InetSocketAddress(host, port), 1500)
-                val out = socket.outputStream
+                java.net.Socket().use { socket ->
+                    socket.connect(java.net.InetSocketAddress(host, port), 1500)
+                    val out = socket.outputStream
 
-                // خرد کردن پکت دقیقا مشابه موتور V2Ray
-                tlsData.toList().chunked(len).forEach { chunk ->
-                    out.write(chunk.toByteArray())
-                    out.flush()
-                    if (inter > 0) Thread.sleep(inter.toLong())
+                    // خرد کردن پکت دقیقا مشابه موتور V2Ray
+                    tlsData.toList().chunked(len).forEach { chunk ->
+                        out.write(chunk.toByteArray())
+                        out.flush()
+                        if (inter > 0) Thread.sleep(inter.toLong())
+                    }
+
+                    socket.soTimeout = 1000
+                    if (socket.inputStream.read() != -1) successCount++
                 }
-
-                socket.soTimeout = 1000
-                if (socket.inputStream.read() != -1) successCount++
-                socket.close()
             }
 
             if (successCount > 0) {
@@ -256,9 +256,9 @@ class ScannerViewModel : ViewModel() {
 
     private fun checkServerHealth(host: String): Boolean {
         return try {
-            val s = java.net.Socket()
-            s.connect(java.net.InetSocketAddress(host, 443), 2000)
-            s.close()
+            java.net.Socket().use { socket ->
+                socket.connect(java.net.InetSocketAddress(host, 443), 2000)
+            }
             true
         } catch (e: Exception) {
             false
@@ -351,9 +351,9 @@ class ScannerViewModel : ViewModel() {
     private fun checkInternet(): Boolean {
         return try {
             val timeoutMs = 1500
-            val socket = java.net.Socket()
-            socket.connect(java.net.InetSocketAddress("8.8.8.8", 53), timeoutMs)
-            socket.close()
+            java.net.Socket().use { socket ->
+                socket.connect(java.net.InetSocketAddress("8.8.8.8", 53), timeoutMs)
+            }
             true
         } catch (e: Exception) {
             false

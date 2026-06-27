@@ -41,12 +41,13 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.theme.SuccessGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -119,13 +120,18 @@ fun FreeConfigScreen() {
             .padding(16.dp)
     ) {
         Text(
-            text = "دریافت کانفیگ رایگان ",
+            text = stringResource(R.string.free_title),
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1976D2)
+            color = MaterialTheme.colorScheme.primary
         )
 
         Spacer(modifier = Modifier.height(12.dp))
+
+        val mixedLabel = stringResource(R.string.free_source_mixed)
+        val allLabel = stringResource(R.string.free_source_all)
+        val fetchErrorLabel = stringResource(R.string.free_fetch_error)
+        val copiedFormat = stringResource(R.string.free_copy_all_action)
 
         // دکمه‌های انتخاب منبع
         LazyRow(
@@ -139,9 +145,9 @@ fun FreeConfigScreen() {
                     url.contains("vmess", ignoreCase = true) -> "Vmess"
                     url.contains("trojan", ignoreCase = true) -> "Trojan"
                     url.contains("ss", ignoreCase = true) -> "Shadowsocks"
-                    url.contains("mix", ignoreCase = true) -> "ترکیبی"
-                    url.contains("all", ignoreCase = true) -> "همه"
-                    else -> "منبع ${sources.indexOf(url) + 1}"
+                    url.contains("mix", ignoreCase = true) -> mixedLabel
+                    url.contains("all", ignoreCase = true) -> allLabel
+                    else -> stringResource(R.string.free_source_n, sources.indexOf(url) + 1)
                 }
 
                 Button(
@@ -153,7 +159,7 @@ fun FreeConfigScreen() {
                                 configs.clear()
                                 configs.addAll(result)
                             } else {
-                                Toast.makeText(context, "خطا در دریافت! باز کردن در مرورگر...", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, fetchErrorLabel, Toast.LENGTH_SHORT).show()
                                 openInBrowser(context, url)
                             }
                             isLoading = false
@@ -161,7 +167,7 @@ fun FreeConfigScreen() {
                     },
                     shape = RoundedCornerShape(8.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (url.contains("RUS")) Color(0xFF607D8B) else MaterialTheme.colorScheme.primary
+                        containerColor = if (url.contains("RUS")) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
                     )
                 ) {
                     Text(label, fontSize = 11.sp)
@@ -179,17 +185,17 @@ fun FreeConfigScreen() {
                     val fullText = configs.joinToString("\n")
                     val clip = ClipData.newPlainText("configs", fullText)
                     clipboard.setPrimaryClip(clip)
-                    Toast.makeText(context, "${configs.size} کانفیگ کپی شد", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.free_copied_count, configs.size), Toast.LENGTH_SHORT).show()
                 }
             },
             modifier = Modifier.fillMaxWidth(),
             enabled = configs.isNotEmpty() && !isLoading,
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF388E3C)),
+            colors = ButtonDefaults.buttonColors(containerColor = SuccessGreen),
             shape = RoundedCornerShape(12.dp)
         ) {
             Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("کپی همه موارد در حافظه")
+            Text(copiedFormat)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -199,17 +205,17 @@ fun FreeConfigScreen() {
             modifier = Modifier
                 .fillMaxSize()
                 .weight(1f)
-                .background(Color(0xFFF5F5F5), shape = RoundedCornerShape(12.dp))
-                .border(1.dp, Color(0xFFE0E0E0), shape = RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant, shape = RoundedCornerShape(12.dp))
+                .border(1.dp, MaterialTheme.colorScheme.outline, shape = RoundedCornerShape(12.dp))
                 .padding(4.dp)
         ) {
             if (isLoading) {
                 CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
             } else if (configs.isEmpty()) {
                 Text(
-                    "یک منبع را از لیست بالا انتخاب کنید",
+                    stringResource(R.string.free_empty_hint),
                     modifier = Modifier.align(Alignment.Center),
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 13.sp
                 )
             } else {
@@ -230,11 +236,11 @@ fun ConfigListItem(text: String) {
             text = text,
             fontSize = 9.sp,
             fontFamily = FontFamily.Monospace,
-            color = Color.DarkGray,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             lineHeight = 12.sp
         )
         Spacer(modifier = Modifier.height(6.dp))
-        Divider(thickness = 0.5.dp, color = Color.LightGray)
+        Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
     }
 }
 
@@ -243,6 +249,6 @@ fun openInBrowser(context: Context, url: String) {
         val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
         context.startActivity(intent)
     } catch (e: Exception) {
-        Toast.makeText(context, "مرورگری یافت نشد!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.free_no_browser), Toast.LENGTH_SHORT).show()
     }
 }

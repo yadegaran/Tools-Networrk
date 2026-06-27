@@ -3,7 +3,6 @@ package com.tools.net
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,8 +22,6 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
@@ -38,9 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.theme.ErrorRed
+import com.tools.net.ui.theme.SuccessGreen
+import com.tools.net.ui.theme.WarningOrange
 
 @Composable
 fun SupportScreen(vm: ScannerViewModel) {
@@ -52,15 +54,15 @@ fun SupportScreen(vm: ScannerViewModel) {
     ) {
         item {
             Text(
-                text = "پشتیبانی و عیب‌یابی هوشمند",
+                text = stringResource(R.string.support_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
             Text(
-                text = "اگر در اتصال مشکل دارید، از ابزار زیر استفاده کنید.",
+                text = stringResource(R.string.support_subtitle),
                 fontSize = 12.sp,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp)
             )
         }
@@ -82,7 +84,7 @@ fun SupportScreen(vm: ScannerViewModel) {
                     tint = MaterialTheme.colorScheme.primary
                 )
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("سوالات متداول (FAQ)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(stringResource(R.string.support_faq_title), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
             Divider(modifier = Modifier.padding(vertical = 8.dp))
         }
@@ -95,18 +97,14 @@ fun SupportScreen(vm: ScannerViewModel) {
 
 @Composable
 fun SmartDiagnosticsCard(vm: ScannerViewModel) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(
-                alpha = 0.5f
-            )
-        )
-    ) {
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text("پزشک شبکه", fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text("بررسی خودکار پارامترهای اصلی اتصال", fontSize = 11.sp, color = Color.Gray)
+            Text(stringResource(R.string.support_doctor_title), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(
+                stringResource(R.string.support_doctor_subtitle),
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -129,9 +127,9 @@ fun SmartDiagnosticsCard(vm: ScannerViewModel) {
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("در حال بررسی...")
+                    Text(stringResource(R.string.support_checking))
                 } else {
-                    Text("شروع آنالیز هوشمند شبکه")
+                    Text(stringResource(R.string.support_start_analysis))
                 }
             }
 
@@ -160,28 +158,28 @@ fun AnalysisResultRow(step: AnalysisStep) {
             AnalysisStatus.SUCCESS -> Icon(
                 imageVector = Icons.Default.CheckCircle,
                 contentDescription = "OK",
-                tint = Color(0xFF4CAF50),
+                tint = SuccessGreen,
                 modifier = Modifier.size(20.dp)
             )
             // استفاده از Warning به جای Error (چون Error در پکیج پایه نیست)
             AnalysisStatus.ERROR -> Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Error",
-                tint = Color.Red,
+                tint = ErrorRed,
                 modifier = Modifier.size(20.dp)
             )
 
             AnalysisStatus.WARNING -> Icon(
                 imageVector = Icons.Default.Warning,
                 contentDescription = "Warning",
-                tint = Color(0xFFFF9800),
+                tint = WarningOrange,
                 modifier = Modifier.size(20.dp)
             )
         }
         Spacer(modifier = Modifier.width(12.dp))
         Column {
             Text(step.title, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-            Text(step.message, fontSize = 11.sp, color = Color.Gray)
+            Text(step.message, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -189,31 +187,27 @@ fun AnalysisResultRow(step: AnalysisStep) {
 @Composable
 fun FinalSolutionBox(results: List<AnalysisStep>) {
     val errorStep = results.firstOrNull { it.status == AnalysisStatus.ERROR }
-    Card(
-        modifier = Modifier.padding(top = 16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFEBEE)),
-        shape = RoundedCornerShape(8.dp)
-    ) {
+    GlassCard(modifier = Modifier.padding(top = 16.dp)) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             // استفاده از آیکon Info به جای Lightbulb
             Icon(
                 imageVector = Icons.Default.Info,
                 contentDescription = "Solution",
-                tint = Color.Red
+                tint = ErrorRed
             )
             Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
-                    "راهکار پیشنهادی:",
+                    stringResource(R.string.support_solution_title),
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red,
+                    color = ErrorRed,
                     fontSize = 13.sp
                 )
                 val solution = when (errorStep?.title) {
-                    "ساعت سیستم" -> "ساعت گوشی شما با سرور هماهنگ نیست. لطفاً در تنظیمات گوشی، تیک 'Automatic Date & Time' را فعال کنید."
-                    "اتصال اینترنت" -> "اینترنت شما قطع است. وضعیت دیتا یا وای‌فای را چک کنید."
-                    "وضعیت سرور" -> "IP سرور پاسخ نمی‌دهد. احتمالاً بلاک شده است. از بخش اسکنر، 'فرگمنت' مناسب پیدا کنید."
-                    else -> "یکبار حالت هواپیما را روشن و خاموش کنید و دوباره امتحان کنید."
+                    "ساعت سیستم" -> stringResource(R.string.support_solution_clock)
+                    "اتصال اینترنت" -> stringResource(R.string.support_solution_internet)
+                    "وضعیت سرور" -> stringResource(R.string.support_solution_server)
+                    else -> stringResource(R.string.support_solution_default)
                 }
                 Text(solution, fontSize = 12.sp, lineHeight = 18.sp)
             }
@@ -224,12 +218,11 @@ fun FinalSolutionBox(results: List<AnalysisStep>) {
 @Composable
 fun FAQCard(item: FAQItem) {
     var expanded by remember { mutableStateOf(false) }
-    Card(
+    GlassCard(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { expanded = !expanded },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            .padding(vertical = 4.dp),
+        onClick = { expanded = !expanded }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -250,7 +243,7 @@ fun FAQCard(item: FAQItem) {
                     text = item.answer,
                     modifier = Modifier.padding(top = 8.dp),
                     fontSize = 12.sp,
-                    color = Color.Gray,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     lineHeight = 18.sp
                 )
             }

@@ -37,8 +37,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,7 +75,7 @@ fun ConverterScreen(vm: ScannerViewModel) {
         modifier = Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Text("دریافت و مبدل هوشمند", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Text(stringResource(R.string.converter_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Spacer(modifier = Modifier.height(16.dp))
 
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -84,7 +84,7 @@ fun ConverterScreen(vm: ScannerViewModel) {
                     onClick = { urlInput = url },
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(8.dp)
-                ) { Text("منبع ${index + 1}", fontSize = 12.sp) }
+                ) { Text(stringResource(R.string.converter_source_n, index + 1), fontSize = 12.sp) }
             }
         }
 
@@ -94,7 +94,7 @@ fun ConverterScreen(vm: ScannerViewModel) {
             value = urlInput,
             onValueChange = { urlInput = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("آدرس منبع کانفیگ") },
+            label = { Text(stringResource(R.string.converter_source_url_label)) },
             shape = RoundedCornerShape(12.dp),
             leadingIcon = {
                 if (isLoading) {
@@ -106,27 +106,26 @@ fun ConverterScreen(vm: ScannerViewModel) {
                         scope.launch {
                             val fetched = fetchConfigsFromUrl(urlInput)
                             if (fetched.isEmpty()) {
-                                // متن درخواستی شما در صورت عدم موفقیت
-                                Toast.makeText(context, "ارتباط برقرار نشد. لطفاً از اتصال اینترنت یا ابزار تغییر آی‌پی خود مطمئن شوید.", Toast.LENGTH_LONG).show()
+                                Toast.makeText(context, context.getString(R.string.converter_fetch_failed), Toast.LENGTH_LONG).show()
                             } else {
                                 val randomConfigs = fetched.shuffled().take(50)
                                 rawConfigs = randomConfigs.joinToString("\n")
-                                Toast.makeText(context, "تعداد ${randomConfigs.size} کانفیگ با موفقیت دریافت شد", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, context.getString(R.string.converter_fetch_success, randomConfigs.size), Toast.LENGTH_SHORT).show()
                             }
                             isLoading = false
                         }
-                    }) { Text("دریافت", fontWeight = FontWeight.Bold) }
+                    }) { Text(stringResource(R.string.converter_fetch_action), fontWeight = FontWeight.Bold) }
                 }
             }
         )
 
-        Divider(modifier = Modifier.padding(vertical = 16.dp), thickness = 1.dp, color = Color.LightGray)
+        Divider(modifier = Modifier.padding(vertical = 16.dp), thickness = 1.dp, color = MaterialTheme.colorScheme.outline)
 
         OutlinedTextField(
             value = targetIp,
             onValueChange = { targetIp = it },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("آی‌پی هدف (تمیز)") },
+            label = { Text(stringResource(R.string.converter_target_ip_label)) },
             shape = RoundedCornerShape(12.dp),
             singleLine = true
         )
@@ -137,13 +136,13 @@ fun ConverterScreen(vm: ScannerViewModel) {
             value = rawConfigs,
             onValueChange = { rawConfigs = it },
             modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
-            label = { Text("لیست ورودی") },
+            label = { Text(stringResource(R.string.converter_input_list_label)) },
             shape = RoundedCornerShape(12.dp),
             leadingIcon = {
                 TextButton(onClick = {
                     val clip = clipboard.primaryClip?.getItemAt(0)?.text?.toString() ?: ""
                     rawConfigs = clip
-                }) { Text("چسباندن") }
+                }) { Text(stringResource(R.string.converter_paste_action)) }
             }
         )
 
@@ -152,14 +151,14 @@ fun ConverterScreen(vm: ScannerViewModel) {
         Button(
             onClick = {
                 if (targetIp.isBlank()) {
-                    Toast.makeText(context, "ابتدا آی‌پی هدف را مشخص کنید", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, context.getString(R.string.converter_target_ip_required), Toast.LENGTH_SHORT).show()
                 } else {
                     val converted = processConfigsLogic(rawConfigs, targetIp)
                     if (converted.isBlank()) {
-                        Toast.makeText(context, "کانفیگ معتبری در لیست ورودی پیدا نشد.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, context.getString(R.string.converter_no_valid_config), Toast.LENGTH_LONG).show()
                     } else {
                         resultConfigs = converted
-                        Toast.makeText(context, "عملیات تبدیل با موفقیت انجام شد", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, context.getString(R.string.converter_success), Toast.LENGTH_SHORT).show()
                     }
                 }
             },
@@ -168,7 +167,7 @@ fun ConverterScreen(vm: ScannerViewModel) {
         ) {
             Icon(Icons.Default.Build, contentDescription = null)
             Spacer(Modifier.width(8.dp))
-            Text("تبدیل و جایگزینی")
+            Text(stringResource(R.string.converter_convert_action))
         }
 
         if (resultConfigs.isNotEmpty()) {
@@ -177,15 +176,21 @@ fun ConverterScreen(vm: ScannerViewModel) {
                 value = resultConfigs,
                 onValueChange = { resultConfigs = it },
                 modifier = Modifier.fillMaxWidth().heightIn(min = 150.dp, max = 300.dp),
-                label = { Text("نتیجه نهایی") },
+                label = { Text(stringResource(R.string.converter_result_label)) },
                 shape = RoundedCornerShape(12.dp),
                 readOnly = true,
                 leadingIcon = {
                     TextButton(onClick = {
                         val clip = android.content.ClipData.newPlainText("Clean", resultConfigs)
                         clipboard.setPrimaryClip(clip)
-                        Toast.makeText(context, "در کلیپ‌بورد کپی شد", Toast.LENGTH_SHORT).show()
-                    }) { Text("کپی کُل", color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold) }
+                        Toast.makeText(context, context.getString(R.string.converter_copied_clipboard), Toast.LENGTH_SHORT).show()
+                    }) {
+                        Text(
+                            stringResource(R.string.converter_copy_all_action),
+                            color = com.tools.net.ui.theme.SuccessGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             )
         }

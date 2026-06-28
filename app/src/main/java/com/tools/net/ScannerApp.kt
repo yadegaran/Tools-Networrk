@@ -220,31 +220,10 @@ fun ScannerApp(vm: ScannerViewModel) {
         }
 
         // ۵. نمایش نتایج
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                stringResource(R.string.scanner_results_title),
-                style = MaterialTheme.typography.titleMedium
-            )
-            val exchangeSuccessLabel = stringResource(R.string.scanner_exchange_success)
-            val successCount = vm.foundIps.count { it.exchangeStatus == exchangeSuccessLabel }
-            if (successCount > 0 && !vm.isScanning.value) {
-                Button(
-                    onClick = { vm.testTopIpsSpeed(5) },
-                    enabled = !vm.isSpeedTesting,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
-                ) {
-                    Text(
-                        stringResource(R.string.scanner_speed_test_action, minOf(5, successCount)),
-                        fontSize = 11.sp
-                    )
-                }
-            }
-        }
+        Text(
+            stringResource(R.string.scanner_results_title),
+            style = MaterialTheme.typography.titleMedium
+        )
         if (vm.isSpeedTesting) {
             Text(
                 vm.speedTestProgress.ifEmpty { stringResource(R.string.scanner_speed_test_running) },
@@ -255,17 +234,63 @@ fun ScannerApp(vm: ScannerViewModel) {
         }
         Spacer(modifier = Modifier.height(4.dp))
 
+        // دسته‌بندی نتایج بر اساس کشور؛ کشورهایی با بهترین سرعت دانلود بالاتر نمایش داده می‌شوند
+        val countryGroups = remember(vm.foundIps.toList()) {
+            vm.foundIps.groupBy { it.countryCode }
+                .entries
+                .sortedByDescending { (_, list) -> list.maxOf { it.downloadMbps } }
+        }
+
         LazyColumn(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             contentPadding = PaddingValues(bottom = 20.dp)
         ) {
-            items(vm.foundIps) { res ->
-                ScannerResultItem(res, vm)
+            countryGroups.forEach { (countryCode, list) ->
+                item(key = "header_$countryCode") {
+                    CountryGroupHeader(countryCode, list.size)
+                }
+                items(list, key = { it.ip }) { res ->
+                    ScannerResultItem(res, vm)
+                }
             }
         }
+    }
+}
+
+@Composable
+fun CountryGroupHeader(countryCode: String, count: Int) {
+    val unknownCountryLabel = stringResource(R.string.scanner_unknown_country)
+    val displayName = remember(countryCode, unknownCountryLabel) {
+        if (countryCode.length == 2 && countryCode != "??") {
+            try {
+                java.util.Locale("", countryCode).displayCountry
+            } catch (e: Exception) {
+                countryCode
+            }
+        } else {
+            unknownCountryLabel
+        }
+    }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 6.dp, bottom = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(countryCodeToFlag(countryCode), fontSize = 18.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(displayName, fontWeight = FontWeight.Bold, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
+        }
+        Text(
+            stringResource(R.string.scanner_group_count, count),
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

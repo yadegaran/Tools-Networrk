@@ -74,10 +74,52 @@ private fun configProtocol(config: String): String = when {
 
 private val protocolOrder = listOf("vless", "vmess", "trojan", "ss", "other")
 
-/** حذف موارد تکراری و مرتب‌سازی بر اساس نوع پروتکل، سپس بر اساس متن. */
+/**
+ * اسم/Remark کانفیگ را استخراج می‌کند: برای vless/trojan/ss معمولاً بعد از "#" در انتهای لینک
+ * قرار دارد (URL-encoded)؛ برای vmess که خودش Base64 از یک JSON است، فیلد "ps" استخراج می‌شود.
+ * اگر اسمی پیدا نشود، خود IP/دامنه به‌عنوان نام نمایش داده می‌شود.
+ */
+fun extractConfigName(config: String): String {
+    return try {
+        if (config.startsWith("vmess://", true)) {
+            val base64Part = config.removePrefix("vmess://")
+            val json = String(Base64.decode(base64Part, Base64.DEFAULT))
+            val nameMatch = Regex(""""ps"\s*:\s*"([^"]*)"""").find(json)
+            val name = nameMatch?.groupValues?.get(1)?.trim()
+            if (!name.isNullOrBlank()) name else fallbackHostName(config)
+        } else {
+            val hashIndex = config.indexOf('#')
+            val rawName = if (hashIndex != -1) config.substring(hashIndex + 1).trim() else ""
+            val decoded = if (rawName.isNotBlank()) {
+                try {
+                    java.net.URLDecoder.decode(rawName, "UTF-8")
+                } catch (e: Exception) {
+                    rawName
+                }
+            } else ""
+            if (decoded.isNotBlank()) decoded else fallbackHostName(config)
+        }
+    } catch (e: Exception) {
+        fallbackHostName(config)
+    }
+}
+
+/** اگر اسمی در کانفیگ پیدا نشد، بخش میزبان (بعد از @ تا اولین جداکننده) به‌عنوان اسم استفاده می‌شود. */
+private fun fallbackHostName(config: String): String {
+    val atIndex = config.indexOf('@')
+    if (atIndex == -1) return config.take(24)
+    val rest = config.substring(atIndex + 1)
+    val end = rest.indexOfFirst { it == ':' || it == '/' || it == '?' || it == '#' }
+    return if (end != -1) rest.substring(0, end) else rest.take(24)
+}
+
+/** حذف موارد تکراری و مرتب‌سازی بر اساس نوع پروتکل و سپس بر اساس اسم/Remark کانفیگ. */
 private fun sortAndDedupeConfigs(list: List<String>): List<String> =
     list.distinct().sortedWith(
-        compareBy({ protocolOrder.indexOf(configProtocol(it)).let { i -> if (i == -1) protocolOrder.size else i } }, { it })
+        compareBy(
+            { protocolOrder.indexOf(configProtocol(it)).let { i -> if (i == -1) protocolOrder.size else i } },
+            { extractConfigName(it).lowercase() }
+        )
     )
 
 private fun protocolColor(protocol: String) = when (protocol) {
@@ -280,9 +322,10 @@ fun FreeConfigScreen() {
 @Composable
 fun ConfigListItem(text: String, context: Context) {
     val protocol = configProtocol(text)
+    val name = remember(text) { extractConfigName(text) }
     GlassCard(modifier = Modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
@@ -298,15 +341,24 @@ fun ConfigListItem(text: String, context: Context) {
                 )
             }
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = text,
-                fontSize = 10.sp,
-                fontFamily = FontFamily.Monospace,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = name,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = text,
+                    fontSize = 9.sp,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
             IconButton(
                 onClick = {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager

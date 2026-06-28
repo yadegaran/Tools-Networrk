@@ -52,6 +52,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,14 +62,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -79,6 +83,7 @@ import com.tools.net.ui.components.GlassCard
 import com.tools.net.ui.theme.AppThemeMode
 import com.tools.net.ui.theme.CleanIpCloudTheme
 import com.tools.net.ui.theme.ThemePreferences
+import com.tools.net.ui.theme.resolveIsDark
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, val titleRes: Int, val icon: ImageVector) {
@@ -103,6 +108,15 @@ class MainActivity : ComponentActivity() {
                 .collectAsState(initial = AppThemeMode.SYSTEM)
 
             CleanIpCloudTheme(themeMode = themeMode) {
+                val isDark = themeMode.resolveIsDark()
+                val primaryColor = MaterialTheme.colorScheme.primary
+                val view = LocalView.current
+                SideEffect {
+                    val window = this@MainActivity.window
+                    window.statusBarColor = primaryColor.toArgb()
+                    // در تم تاریک، رنگ primary روشن می‌شود؛ پس آیکون‌های نوار وضعیت باید تیره باشند و برعکس
+                    WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = isDark
+                }
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
                     GlassAppBackground {
                         MainNavigationApp(
@@ -164,13 +178,13 @@ fun MainNavigationApp(
                     Column {
                         Text(
                             stringResource(R.string.app_name),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             stringResource(R.string.app_slogan),
-                            color = Color.White.copy(alpha = 0.8f),
+                            color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                             fontSize = 12.sp
                         )
                     }
@@ -231,7 +245,7 @@ fun MainNavigationApp(
                     title = {
                         Text(
                             stringResource(R.string.app_name),
-                            color = Color.White,
+                            color = MaterialTheme.colorScheme.onPrimary,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -241,11 +255,15 @@ fun MainNavigationApp(
                             Icon(
                                 Icons.Default.Menu,
                                 contentDescription = stringResource(R.string.menu_content_description),
-                                tint = Color.White
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = MaterialTheme.colorScheme.onPrimary,
+                        navigationIconContentColor = MaterialTheme.colorScheme.onPrimary
+                    )
                 )
             }
         ) { innerPadding ->

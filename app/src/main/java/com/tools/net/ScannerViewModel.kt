@@ -7,13 +7,17 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.random.Random
 
 class ScannerViewModel : ViewModel() {
@@ -34,6 +38,15 @@ class ScannerViewModel : ViewModel() {
     var analysisResults = mutableStateListOf<AnalysisStep>()
     var isAnalyzing by mutableStateOf(false)
 
+    /**
+     * اسکن دو فاز (مشابه ایده‌ی پروژه‌های اسکنر کلودفلر):
+     * فاز ۱: پروب سریع TCP روی IPهای تصادفی رنج‌های انتخابی.
+     * فاز ۲: تایید واقعی با هندشیک HTTP/Host-Spoof (تبادل داده واقعی + موقعیت).
+     * علاوه‌براین، به محض پیدا شدن یک IP سالم، چند «همسایه» آن (همان بلوک /24) هم
+     * صف می‌شوند چون کلودفلر معمولاً کیفیت مشابهی در یک بلوک ارائه می‌دهد.
+     * هم‌زمان یک صف پس‌زمینه با همروندی محدود، سرعت دانلود/آپلود واقعی همه‌ی
+     * IPهای تایید‌شده را اندازه می‌گیرد تا فشار شبکه روی فاز پروبینگ نیفتد.
+     */
     fun startScan(
         selectedRanges: List<String>,
         threads: Int,
@@ -43,73 +56,123 @@ class ScannerViewModel : ViewModel() {
     ) {
         viewModelScope.launch(Dispatchers.Default) {
             isScanning.value = true
+            isSpeedTesting = true
             foundIps.clear()
             val semaphore = Semaphore(threads)
+            val triedIps = ConcurrentHashMap.newKeySet<String>()
+            val speedQueue = Channel<String>(Channel.UNLIMITED)
 
-            // حلقه اصلی اسکن
-            while (isScanning.value && foundIps.size < maxResults) {
-                if (!isScanning.value) break
-
-                launch {
-                    semaphore.withPermit {
-                        if (!isScanning.value) return@launch
-
-                        // ۱. انتخاب رنج و تولید آی‌پی هوشمند
-                        val range =
-                            if (selectedRanges.isEmpty()) ipRanges.random() else selectedRanges.random()
-                        val ip = generateSmartIp(range)
-                        val port = userPort
-
-                        // ۲. تست اولیه (Ping & Packet Loss)
-                        val res = checkSocket(ip, port, timeout)
-
-                        if (res.isSuccess) {
-                            // اضافه کردن اولیه به لیست در ترد اصلی
-                            withContext(Dispatchers.Main) {
-                                if (foundIps.size < maxResults && foundIps.none { it.ip == ip }) {
-                                    foundIps.add(res)
-                                    // مرتب‌سازی اولیه بر اساس پکت لاست و پینگ
-                                    foundIps.sortWith(
-                                        compareBy<IpScanResult> { it.packetLoss }
-                                            .thenBy { it.latency }
-                                    )
-                                }
+            // ۲ کارگر پس‌زمینه برای تست سرعت واقعی، مستقل از فاز پروبینگ
+            val speedWorkers = List(2) {
+                launch(Dispatchers.IO) {
+                    for (ip in speedQueue) {
+                        withContext(Dispatchers.Main) { speedTestProgress = "تست سرعت: $ip" }
+                        val download = NetworkUtils.measureDownloadMbps(ip)
+                        val upload = NetworkUtils.measureUploadMbps(ip)
+                        withContext(Dispatchers.Main) {
+                            val index = foundIps.indexOfFirst { it.ip == ip }
+                            if (index != -1) {
+                                foundIps[index] = foundIps[index].copy(
+                                    downloadMbps = download,
+                                    uploadMbps = upload,
+                                    isSpeedTested = true
+                                )
+                                resortFoundIps()
                             }
+                        }
+                    }
+                }
+            }
 
-                            // ۳. بررسی اطلاعات لوکیشن و وضعیت تبادل داده (Data Exchange)
-                            val info = NetworkUtils.fetchCloudflareInfo(ip)
-                            val status = NetworkUtils.checkDataExchange(ip, port)
+            // coroutineScope تضمین می‌کند همه‌ی پروب‌های اصلی و همسایه (حتی آن‌هایی که با تاخیر
+            // لانچ شده‌اند) قبل از بستن صف تست سرعت، کامل تمام شوند - وگرنه چند IP آخر ممکن
+            // بود بی‌صدا از تست سرعت جا بمانند.
+            coroutineScope {
+                suspend fun probeIp(ip: String, port: Int, isNeighbor: Boolean) {
+                    if (!triedIps.add(ip)) return // قبلاً تست شده
+                    if (!isScanning.value) return
 
-                            // ۴. آپدیت نهایی آیتم و مرتب‌سازی فوق هوشمند
-                            withContext(Dispatchers.Main) {
-                                val index = foundIps.indexOfFirst { it.ip == ip }
-                                if (index != -1) {
-                                    foundIps[index] = foundIps[index].copy(
-                                        colo = info.first,
-                                        countryCode = info.second,
-                                        exchangeStatus = status,
-                                        // اگر تبادل ناموفق بود، پکت لاست را ۱۰۰ فرض کن تا برود ته لیست
-                                        packetLoss = if (status != "تبادل موفق") 100 else foundIps[index].packetLoss
-                                    )
+                    val res = checkSocket(ip, port, timeout)
+                    if (!res.isSuccess) return
 
-                                    // مرتب‌سازی نهایی:
-                                    // اولویت ۱: تبادل موفق باشد (نزولی - Trueها بالا)
-                                    // اولویت ۲: کمترین پکت لاست (صعودی)
-                                    // اولویت ۳: کمترین پینگ (صعودی)
-                                    foundIps.sortWith(
-                                        compareByDescending<IpScanResult> { it.exchangeStatus == "تبادل موفق" }
-                                            .thenBy { it.packetLoss }
-                                            .thenBy { it.latency }
-                                    )
+                    withContext(Dispatchers.Main) {
+                        if (foundIps.size < maxResults && foundIps.none { it.ip == ip }) {
+                            foundIps.add(res)
+                            foundIps.sortWith(compareBy<IpScanResult> { it.packetLoss }.thenBy { it.latency })
+                        }
+                    }
+
+                    val info = NetworkUtils.fetchCloudflareInfo(ip)
+                    val status = NetworkUtils.checkDataExchange(ip, port)
+                    val isVerified = status == "تبادل موفق"
+
+                    withContext(Dispatchers.Main) {
+                        val index = foundIps.indexOfFirst { it.ip == ip }
+                        if (index != -1) {
+                            foundIps[index] = foundIps[index].copy(
+                                colo = info.first,
+                                countryCode = info.second,
+                                exchangeStatus = status,
+                                packetLoss = if (!isVerified) 100 else foundIps[index].packetLoss
+                            )
+                            resortFoundIps()
+                        }
+                    }
+
+                    if (isVerified) {
+                        speedQueue.trySend(ip)
+                        // اسکن همسایه‌های همین بلوک /24 (کیفیت مشابه در کلودفلر رایج است)
+                        if (!isNeighbor && foundIps.size < maxResults) {
+                            val octets = ip.split(".")
+                            if (octets.size == 4) {
+                                val base = octets[3].toIntOrNull() ?: 0
+                                val neighborOffsets = listOf(-2, -1, 1, 2)
+                                neighborOffsets.forEach { offset ->
+                                    val lastOctet = base + offset
+                                    if (lastOctet in 1..254) {
+                                        val neighborIp = "${octets[0]}.${octets[1]}.${octets[2]}.$lastOctet"
+                                        launch { semaphore.withPermit { probeIp(neighborIp, port, isNeighbor = true) } }
+                                    }
                                 }
                             }
                         }
                     }
                 }
-                delay(15) // وقفه کوتاه برای مدیریت پردازش
+
+                // حلقه اصلی فاز ۱: پروب تصادفی
+                while (isScanning.value && foundIps.size < maxResults) {
+                    launch {
+                        semaphore.withPermit {
+                            val range = if (selectedRanges.isEmpty()) ipRanges.random() else selectedRanges.random()
+                            val ip = generateSmartIp(range)
+                            probeIp(ip, userPort, isNeighbor = false)
+                        }
+                    }
+                    delay(15) // وقفه کوتاه برای مدیریت پردازش
+                }
+                isScanning.value = false
             }
-            isScanning.value = false
+
+            speedQueue.close()
+            speedWorkers.joinAll()
+            isSpeedTesting = false
+            speedTestProgress = ""
         }
+    }
+
+    /**
+     * مرتب‌سازی نهایی نتایج: ابتدا تبادل موفق، سپس IPهایی که تست سرعت شده‌اند با سرعت دانلود بالاتر،
+     * و در آخر بر اساس کمترین پکت‌لاست/پینگ.
+     */
+    private fun resortFoundIps() {
+        val successLabel = "تبادل موفق"
+        foundIps.sortWith(
+            compareByDescending<IpScanResult> { it.exchangeStatus == successLabel }
+                .thenByDescending { it.isSpeedTested }
+                .thenByDescending { it.downloadMbps }
+                .thenBy { it.packetLoss }
+                .thenBy { it.latency }
+        )
     }
 
     // متد بهبود یافته برای تولید آی‌پی‌های متنوع‌تر در رنج
@@ -168,53 +231,6 @@ class ScannerViewModel : ViewModel() {
                 IpScanResult(ip, port, -1, isSuccess = false, packetLoss = 100)
             }
         }
-
-    /**
-     * روی بهترین IPهای پیداشده (با تبادل موفق) تست واقعی دانلود/آپلود می‌گیرد،
-     * سپس نتایج را بر اساس کشور گروه‌بندی و درون هر کشور بر اساس سرعت دانلود مرتب می‌کند.
-     */
-    fun testTopIpsSpeed(topCount: Int = 5) {
-        if (isSpeedTesting) return
-        viewModelScope.launch(Dispatchers.IO) {
-            isSpeedTesting = true
-            val successLabel = "تبادل موفق"
-            val candidates = withContext(Dispatchers.Main) {
-                foundIps.filter { it.exchangeStatus == successLabel }
-                    .sortedWith(compareBy<IpScanResult> { it.packetLoss }.thenBy { it.latency })
-                    .take(topCount)
-            }
-
-            candidates.forEachIndexed { idx, item ->
-                withContext(Dispatchers.Main) {
-                    speedTestProgress = "تست سرعت ${idx + 1} از ${candidates.size}: ${item.ip}"
-                }
-                val download = NetworkUtils.measureDownloadMbps(item.ip)
-                val upload = NetworkUtils.measureUploadMbps(item.ip)
-                withContext(Dispatchers.Main) {
-                    val index = foundIps.indexOfFirst { it.ip == item.ip }
-                    if (index != -1) {
-                        foundIps[index] = foundIps[index].copy(
-                            downloadMbps = download,
-                            uploadMbps = upload,
-                            isSpeedTested = true
-                        )
-                    }
-                    // مرتب‌سازی: ابتدا تست‌شده‌ها، سپس گروه‌بندی بر اساس کشور، سپس سرعت دانلود
-                    foundIps.sortWith(
-                        compareByDescending<IpScanResult> { it.isSpeedTested }
-                            .thenBy { it.countryCode }
-                            .thenByDescending { it.downloadMbps }
-                            .thenByDescending { it.exchangeStatus == successLabel }
-                            .thenBy { it.packetLoss }
-                            .thenBy { it.latency }
-                    )
-                }
-            }
-
-            speedTestProgress = ""
-            isSpeedTesting = false
-        }
-    }
 
     fun startDeepFragmentScan(targetHost: String = "1.1.1.1") {
         viewModelScope.launch(Dispatchers.IO) {

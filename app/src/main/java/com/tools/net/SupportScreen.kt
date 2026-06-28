@@ -126,7 +126,7 @@ fun SmartDiagnosticsCard(vm: ScannerViewModel) {
                 if (vm.isAnalyzing) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(20.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                     Spacer(modifier = Modifier.width(8.dp))

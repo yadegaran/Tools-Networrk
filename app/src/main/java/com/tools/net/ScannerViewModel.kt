@@ -23,6 +23,9 @@ class ScannerViewModel : ViewModel() {
     var isScanningg by mutableStateOf(false)
     val selectedIpForConverter = mutableStateOf("")
 
+    var isSpeedTesting by mutableStateOf(false)
+    var speedTestProgress by mutableStateOf("")
+
     val scanResults = mutableStateListOf<FragmentResult>()
 
     var currentProgress by mutableStateOf(0f)
@@ -165,6 +168,53 @@ class ScannerViewModel : ViewModel() {
                 IpScanResult(ip, port, -1, isSuccess = false, packetLoss = 100)
             }
         }
+
+    /**
+     * روی بهترین IPهای پیداشده (با تبادل موفق) تست واقعی دانلود/آپلود می‌گیرد،
+     * سپس نتایج را بر اساس کشور گروه‌بندی و درون هر کشور بر اساس سرعت دانلود مرتب می‌کند.
+     */
+    fun testTopIpsSpeed(topCount: Int = 5) {
+        if (isSpeedTesting) return
+        viewModelScope.launch(Dispatchers.IO) {
+            isSpeedTesting = true
+            val successLabel = "تبادل موفق"
+            val candidates = withContext(Dispatchers.Main) {
+                foundIps.filter { it.exchangeStatus == successLabel }
+                    .sortedWith(compareBy<IpScanResult> { it.packetLoss }.thenBy { it.latency })
+                    .take(topCount)
+            }
+
+            candidates.forEachIndexed { idx, item ->
+                withContext(Dispatchers.Main) {
+                    speedTestProgress = "تست سرعت ${idx + 1} از ${candidates.size}: ${item.ip}"
+                }
+                val download = NetworkUtils.measureDownloadMbps(item.ip)
+                val upload = NetworkUtils.measureUploadMbps(item.ip)
+                withContext(Dispatchers.Main) {
+                    val index = foundIps.indexOfFirst { it.ip == item.ip }
+                    if (index != -1) {
+                        foundIps[index] = foundIps[index].copy(
+                            downloadMbps = download,
+                            uploadMbps = upload,
+                            isSpeedTested = true
+                        )
+                    }
+                    // مرتب‌سازی: ابتدا تست‌شده‌ها، سپس گروه‌بندی بر اساس کشور، سپس سرعت دانلود
+                    foundIps.sortWith(
+                        compareByDescending<IpScanResult> { it.isSpeedTested }
+                            .thenBy { it.countryCode }
+                            .thenByDescending { it.downloadMbps }
+                            .thenByDescending { it.exchangeStatus == successLabel }
+                            .thenBy { it.packetLoss }
+                            .thenBy { it.latency }
+                    )
+                }
+            }
+
+            speedTestProgress = ""
+            isSpeedTesting = false
+        }
+    }
 
     fun startDeepFragmentScan(targetHost: String = "1.1.1.1") {
         viewModelScope.launch(Dispatchers.IO) {
@@ -349,39 +399,51 @@ class ScannerViewModel : ViewModel() {
     // --- توابع اجرایی تست‌ها ---
 
     private fun checkInternet(): Boolean {
-        return try {
-            val timeoutMs = 1500
-            java.net.Socket().use { socket ->
-                socket.connect(java.net.InetSocketAddress("8.8.8.8", 53), timeoutMs)
+        // چند هاست مختلف امتحان می‌شود تا بلاک‌شدن یک سرویس خاص باعث نتیجه غلط نشود
+        val hosts = listOf("8.8.8.8", "1.1.1.1")
+        for (host in hosts) {
+            try {
+                java.net.Socket().use { socket ->
+                    socket.connect(java.net.InetSocketAddress(host, 53), 1500)
+                }
+                return true
+            } catch (e: Exception) {
+                // امتحان هاست بعدی
             }
-            true
-        } catch (e: Exception) {
-            false
         }
+        return false
     }
 
     private fun checkDNS(): Boolean {
-        return try {
-            val address = java.net.InetAddress.getByName("google.com")
-            address.hostAddress.isNotEmpty()
-        } catch (e: Exception) {
-            false
+        val domains = listOf("google.com", "cloudflare.com")
+        for (domain in domains) {
+            try {
+                val address = java.net.InetAddress.getByName(domain)
+                if (address.hostAddress.isNotEmpty()) return true
+            } catch (e: Exception) {
+                // امتحان دامنه بعدی
+            }
         }
+        return false
     }
 
     private fun checkSystemTime(): Long {
         // در حالت ایده آل باید با سرور NTP چک شود،
         // فعلاً برای سادگی فرض میکنیم اگر DNS و اینترنت وصل باشد، زمان سیستم را با زمان دریافت شده از هدر یک سایت مقایسه میکنیم.
-        return try {
-            val url = java.net.URL("https://google.com")
-            val connection = url.openConnection()
-            connection.connectTimeout = 2000
-            val serverDate = connection.getHeaderFieldDate("Date", 0)
-            if (serverDate == 0L) return 0L
-            Math.abs(System.currentTimeMillis() - serverDate)
-        } catch (e: Exception) {
-            0L
+        // اگر یک سایت بلاک باشد، سایت بعدی هم امتحان می‌شود.
+        val hosts = listOf("https://google.com", "https://cloudflare.com")
+        for (urlStr in hosts) {
+            try {
+                val url = java.net.URL(urlStr)
+                val connection = url.openConnection()
+                connection.connectTimeout = 2000
+                val serverDate = connection.getHeaderFieldDate("Date", 0)
+                if (serverDate != 0L) return Math.abs(System.currentTimeMillis() - serverDate)
+            } catch (e: Exception) {
+                // امتحان سایت بعدی
+            }
         }
+        return 0L
     }
 
 

@@ -120,6 +120,9 @@ fun SpeedTestScreen(vm: ScannerViewModel) {
                 Icon(Icons.Default.Refresh, contentDescription = stringResource(R.string.speed_refresh_action))
             }
         }
+        Spacer(modifier = Modifier.height(4.dp))
+        com.tools.net.ui.components.HelpCard(stringResource(R.string.help_speed_test))
+        Spacer(modifier = Modifier.height(12.dp))
 
         GlassCard(modifier = Modifier.fillMaxWidth()) {
             Column(modifier = Modifier.padding(12.dp)) {

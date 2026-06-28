@@ -10,7 +10,10 @@ data class IpScanResult(
     var countryCode: String = "??",
     var exchangeStatus: String = "در حال بررسی...",
     var mtu: Int = 1420,
-    var packetLoss: Int = 0
+    var packetLoss: Int = 0,
+    var downloadMbps: Double = -1.0,
+    var uploadMbps: Double = -1.0,
+    var isSpeedTested: Boolean = false
 )
 
 

@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.components.HelpCard
 import com.tools.net.ui.theme.ErrorRed
 import com.tools.net.ui.theme.SuccessGreen
 import kotlinx.coroutines.Dispatchers
@@ -79,6 +80,8 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
             fontWeight = FontWeight.Bold
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+        HelpCard(stringResource(R.string.help_network_tools))
         Spacer(modifier = Modifier.height(20.dp))
 
         // ۱. اطلاعات IP
@@ -149,11 +152,18 @@ fun NetworkToolsScreen(vm: ScannerViewModel) {
                     .padding(16.dp),
                 contentAlignment = Alignment.Center
             ) {
+                val mtuIsNumeric = bestMtuValue.toIntOrNull() != null
                 Text(
                     if (isMtuRunning) stringResource(R.string.net_tools_mtu_testing, currentMtuStep) else bestMtuValue,
-                    fontSize = 32.sp,
+                    fontSize = if (isMtuRunning || mtuIsNumeric) 32.sp else 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (bestMtuValue == "1500") MaterialTheme.colorScheme.onSurfaceVariant else SuccessGreen
+                    color = when {
+                        isMtuRunning -> MaterialTheme.colorScheme.onSurfaceVariant
+                        bestMtuValue == "1500" -> MaterialTheme.colorScheme.onSurfaceVariant
+                        mtuIsNumeric -> SuccessGreen
+                        bestMtuValue == "-" -> MaterialTheme.colorScheme.onSurfaceVariant
+                        else -> ErrorRed
+                    }
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -248,42 +258,77 @@ suspend fun performDetailedDnsCheck(): List<String> = withContext(Dispatchers.IO
 }
 
 
+private enum class PingOutcome { SUCCESS, FAILED, NOT_PERMITTED }
+
+/**
+ * یک پکت ping با سایز مشخص اجرا می‌کند. استریم‌های خروجی/خطا کامل خوانده می‌شوند
+ * تا روی دستگاه‌هایی که بافر pipe را پر می‌کنند، پروسه هنگ نکند.
+ * ابتدا با فلگ Don't-Fragment (-M do) تلاش می‌شود تا واقعاً MTU مسیر سنجیده شود؛
+ * اگر این فلگ روی دستگاه پشتیبانی نشود، بدون آن دوباره تلاش می‌شود.
+ */
+private fun runSinglePing(host: String, payload: Int, useDontFragment: Boolean): PingOutcome {
+    return try {
+        val cmd = if (useDontFragment) {
+            "ping -c 1 -s $payload -W 1 -M do $host"
+        } else {
+            "ping -c 1 -s $payload -W 1 $host"
+        }
+        val process = Runtime.getRuntime().exec(cmd)
+        // باید استریم‌ها را کامل خواند، وگرنه روی برخی دستگاه‌ها پروسه برای همیشه منتظر می‌ماند
+        val output = process.inputStream.bufferedReader().use { it.readText() }
+        val errorOutput = process.errorStream.bufferedReader().use { it.readText() }
+        val exitCode = process.waitFor()
+
+        when {
+            exitCode == 0 -> PingOutcome.SUCCESS
+            // اگر فلگ -M do پشتیبانی نشود، باینری معمولاً خطای "invalid option" می‌دهد
+            useDontFragment && (errorOutput.contains("invalid", true) || errorOutput.contains("unknown", true) || output.contains("invalid", true)) ->
+                PingOutcome.NOT_PERMITTED
+            else -> PingOutcome.FAILED
+        }
+    } catch (e: Exception) {
+        PingOutcome.NOT_PERMITTED
+    }
+}
+
 suspend fun runRealMtuTest(target: String, onStep: (Int) -> Unit): String {
     return withContext(Dispatchers.IO) {
-        var bestPayload = 0
         // استفاده از یک هدف معتبر جهانی مثل 8.8.8.8
         val host = if (target.isEmpty() || target.contains("در حال") || target == "-") "8.8.8.8" else target
 
+        var useDontFragment = true
+        var bestPayload = 0
+        var permissionDenied = false
+
         // شروع از 1472 (که با 28 بایت هدر می شود 1500) تا 472 (که می شود 500)
         for (payload in 1472 downTo 472 step 10) {
-            val currentMtuInUI = payload + 28
-            onStep(currentMtuInUI)
+            onStep(payload + 28)
 
-            val isSuccessful = try {
-                // -c 1: فقط یک پکت
-                // -s: تعیین سایز دیتا (Payload)
-                // -W 1: یک ثانیه صبر برای پاسخ
-                val process = Runtime.getRuntime().exec("ping -c 1 -s $payload -W 1 $host")
-                val exitCode = process.waitFor()
-
-                // اگر exitCode صفر باشد، یعنی پکت با موفقیت برگشته (بدون نیاز به fragmentation)
-                exitCode == 0
-            } catch (e: Exception) {
-                false
+            var outcome = runSinglePing(host, payload, useDontFragment)
+            if (outcome == PingOutcome.NOT_PERMITTED && useDontFragment) {
+                // فلگ -M do پشتیبانی نمی‌شود؛ از این به بعد بدون آن امتحان کن
+                useDontFragment = false
+                outcome = runSinglePing(host, payload, useDontFragment)
             }
 
-            if (isSuccessful) {
-                bestPayload = payload
-                break // اولین (بزرگترین) سایزی که جواب داد را پیدا کردیم
+            when (outcome) {
+                PingOutcome.SUCCESS -> {
+                    bestPayload = payload
+                    break
+                }
+                PingOutcome.NOT_PERMITTED -> {
+                    permissionDenied = true
+                    break
+                }
+                PingOutcome.FAILED -> { /* ادامه با سایز کوچک‌تر */ }
             }
-            // یک وقفه بسیار کوتاه برای جلوگیری از تداخل پکت‌ها
-            kotlinx.coroutines.delay(20)
+            kotlinx.coroutines.delay(20) // وقفه کوتاه برای جلوگیری از تداخل پکت‌ها
         }
 
-        if (bestPayload == 0) {
-            "ناموفق (ICMP مسدود است)"
-        } else {
-            (bestPayload + 28).toString()
+        when {
+            permissionDenied -> "اجرای ping مجاز نیست"
+            bestPayload == 0 -> "ناموفق (ICMP مسدود است)"
+            else -> (bestPayload + 28).toString()
         }
     }
 }

@@ -5,7 +5,6 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +13,8 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -42,6 +43,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.HelpCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -62,7 +64,11 @@ fun ConverterScreen(vm: ScannerViewModel) {
 
     val defaultUrls = listOf(
         "https://raw.githubusercontent.com/10ium/V2RayAggregator/master/sub/sub_merge.txt",
-        "https://github.com/Epodonios/v2ray-configs/raw/main/All_Configs_Sub.txt"
+        "https://github.com/Epodonios/v2ray-configs/raw/main/All_Configs_Sub.txt",
+        "https://raw.githubusercontent.com/4n0nymou3/multi-proxy-config-fetcher/refs/heads/main/configs/proxy_configs.txt",
+        "https://raw.githubusercontent.com/AvenCores/goida-vpn-configs/refs/heads/main/githubmirror/1.txt",
+        "https://raw.githubusercontent.com/mheidari98/.proxy/refs/heads/main/all",
+        "https://raw.githubusercontent.com/V2RayRoot/V2RayConfig/refs/heads/main/Config/vless.txt"
     )
 
     LaunchedEffect(vm.selectedIpForConverter.value) {
@@ -76,13 +82,18 @@ fun ConverterScreen(vm: ScannerViewModel) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(stringResource(R.string.converter_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(12.dp))
+
+        HelpCard(stringResource(R.string.help_converter), modifier = Modifier.fillMaxWidth())
         Spacer(modifier = Modifier.height(16.dp))
 
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            defaultUrls.forEachIndexed { index, url ->
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(defaultUrls.size) { index ->
                 OutlinedButton(
-                    onClick = { urlInput = url },
-                    modifier = Modifier.weight(1f),
+                    onClick = { urlInput = defaultUrls[index] },
                     shape = RoundedCornerShape(8.dp)
                 ) { Text(stringResource(R.string.converter_source_n, index + 1), fontSize = 12.sp) }
             }

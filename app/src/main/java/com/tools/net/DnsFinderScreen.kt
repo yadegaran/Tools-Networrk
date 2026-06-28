@@ -40,12 +40,15 @@ import androidx.compose.ui.unit.sp
 import com.tools.net.ui.components.GlassCard
 import com.tools.net.ui.theme.ErrorRed
 import com.tools.net.ui.theme.SuccessGreen
+import com.tools.net.ui.components.HelpCard
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
+import java.net.DatagramPacket
+import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.InetSocketAddress
-import java.net.Socket
+import kotlin.random.Random
 
 data class DnsResult(val ip: String, val latency: Long)
 
@@ -70,6 +73,8 @@ fun DnsFinderScreen(vm: ScannerViewModel) {
             fontWeight = FontWeight.Bold
         )
 
+        Spacer(modifier = Modifier.height(12.dp))
+        HelpCard(stringResource(R.string.help_dns))
         Spacer(modifier = Modifier.height(12.dp))
 
         OutlinedTextField(
@@ -226,39 +231,69 @@ suspend fun runAdvancedDnsTest(
                 val trimmedDns = dnsIp.trim()
                 onUpdate((index + 1).toFloat() / total, context.getString(R.string.dns_status_checking, trimmedDns))
 
-                val startTime = System.currentTimeMillis()
-
-                try {
-                    // ۱. تست لایه اتصال (TCP Handshake) - سوکت در finally بسته می‌شود تا در صورت تایم‌اوت لیک نکند
-                    Socket().use { socket ->
-                        socket.connect(InetSocketAddress(trimmedDns, 53), 750)
-                    }
-
-                    // ۲. تست لایه رزولوشن (DNS Query)
-                    // توجه: InetAddress.getByName در اندروید به تنهایی اجازه تعیین سرور DNS را نمی‌دهد.
-                    // اما به عنوان یک تخمین برای "در دسترس بودن" دامنه روی شبکه فعلی استفاده می‌شود.
-                    val address = InetAddress.getByName(cleanDomain)
-                    val resolvedIp = address.hostAddress ?: ""
-
-                    // فیلتر مسمومیت DNS (آی‌پی‌های فیک فیلترینگ ایران)
-                    val isPoisoned = resolvedIp.startsWith("10.") ||
-                            resolvedIp.startsWith("127.") ||
-                            resolvedIp == "0.0.0.0"
-
-                    if (!isPoisoned) {
-                        val latency = System.currentTimeMillis() - startTime
-                        verifiedDns.add(DnsResult(trimmedDns, latency))
-                    }
-                } catch (e: Exception) {
-
+                // کوئری DNS واقعی (UDP) مستقیماً از همین سرور - نه از resolver سیستم
+                val latency = queryDnsServer(trimmedDns, cleanDomain, timeoutMs = 1200)
+                if (latency != null) {
+                    verifiedDns.add(DnsResult(trimmedDns, latency))
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-
         verifiedDns.sortBy { it.latency }
         verifiedDns
     }
 }
+
+/** یک پکت کوئری DNS استاندارد (نوع A) برای دامنه مشخص می‌سازد. */
+private fun buildDnsQuery(domain: String, transactionId: Int): ByteArray {
+    val out = ByteArrayOutputStream()
+    out.write(transactionId ushr 8); out.write(transactionId and 0xFF) // Transaction ID
+    out.write(0x01); out.write(0x00) // Flags: کوئری استاندارد + recursion desired
+    out.write(0x00); out.write(0x01) // QDCOUNT = 1
+    out.write(0x00); out.write(0x00) // ANCOUNT = 0
+    out.write(0x00); out.write(0x00) // NSCOUNT = 0
+    out.write(0x00); out.write(0x00) // ARCOUNT = 0
+    domain.split(".").forEach { label ->
+        if (label.isNotEmpty()) {
+            out.write(label.length)
+            out.write(label.toByteArray(Charsets.US_ASCII))
+        }
+    }
+    out.write(0x00) // پایان QNAME
+    out.write(0x00); out.write(0x01) // QTYPE = A
+    out.write(0x00); out.write(0x01) // QCLASS = IN
+    return out.toByteArray()
+}
+
+/**
+ * یک کوئری DNS واقعی روی UDP پورت ۵۳ به سرور مشخص می‌فرستد و در صورت پاسخ معتبر
+ * (همان Transaction ID، بدون خطا و حداقل یک رکورد پاسخ)، تاخیر رفت‌وبرگشت را برمی‌گرداند.
+ */
+private suspend fun queryDnsServer(dnsIp: String, domain: String, timeoutMs: Int): Long? =
+    withContext(Dispatchers.IO) {
+        try {
+            val transactionId = Random.nextInt(0, 65535)
+            val query = buildDnsQuery(domain, transactionId)
+            DatagramSocket().use { socket ->
+                socket.soTimeout = timeoutMs
+                val address = InetAddress.getByName(dnsIp)
+                val start = System.currentTimeMillis()
+                socket.send(DatagramPacket(query, query.size, address, 53))
+
+                val buffer = ByteArray(512)
+                val responsePacket = DatagramPacket(buffer, buffer.size)
+                socket.receive(responsePacket)
+                val elapsed = System.currentTimeMillis() - start
+
+                val respId = ((buffer[0].toInt() and 0xFF) shl 8) or (buffer[1].toInt() and 0xFF)
+                val rcode = buffer[3].toInt() and 0x0F
+                val ancount = ((buffer[6].toInt() and 0xFF) shl 8) or (buffer[7].toInt() and 0xFF)
+
+                if (respId == transactionId && rcode == 0 && ancount > 0) elapsed else null
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }

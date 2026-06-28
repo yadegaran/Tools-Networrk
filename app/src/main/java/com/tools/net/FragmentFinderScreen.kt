@@ -24,8 +24,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -37,6 +42,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.components.HelpCard
 import com.tools.net.ui.theme.ErrorRed
 import com.tools.net.ui.theme.SuccessGreen
 import com.tools.net.ui.theme.WarningOrange
@@ -45,6 +51,7 @@ import com.tools.net.ui.theme.WarningOrange
 fun FragmentFinderScreen(vm: ScannerViewModel) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    var targetHost by remember { mutableStateOf("1.1.1.1") }
 
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
         // --- هدر صفحه ---
@@ -55,15 +62,37 @@ fun FragmentFinderScreen(vm: ScannerViewModel) {
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
+        HelpCard(stringResource(R.string.help_fragment_finder))
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
+            value = targetHost,
+            onValueChange = { targetHost = it },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(stringResource(R.string.fragment_target_label)) },
+            singleLine = true,
+            enabled = !vm.isScanningg,
+            shape = RoundedCornerShape(12.dp)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         // --- بخش دکمه‌های کنترل (اسکن و توقف) ---
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            val emptyTargetMsg = stringResource(R.string.fragment_target_required)
             Button(
-                onClick = { vm.startDeepFragmentScan() },
+                onClick = {
+                    val host = targetHost.trim()
+                    if (host.isEmpty()) {
+                        Toast.makeText(context, emptyTargetMsg, Toast.LENGTH_SHORT).show()
+                    } else {
+                        vm.startDeepFragmentScan(host)
+                    }
+                },
                 modifier = Modifier.weight(1f),
                 enabled = !vm.isScanningg, // غیرفعال شدن دکمه هنگام اسکن
                 shape = RoundedCornerShape(12.dp)

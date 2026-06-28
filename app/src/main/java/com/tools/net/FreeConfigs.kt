@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -25,11 +26,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Divider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,15 +47,46 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.components.HelpCard
+import com.tools.net.ui.theme.BrandPurple
+import com.tools.net.ui.theme.InfoBlue
 import com.tools.net.ui.theme.SuccessGreen
+import com.tools.net.ui.theme.WarningOrange
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.nio.charset.Charset
+
+/** پروتکل کانفیگ را از روی پیشوند آن تشخیص می‌دهد. */
+private fun configProtocol(config: String): String = when {
+    config.startsWith("vless://", true) -> "vless"
+    config.startsWith("vmess://", true) -> "vmess"
+    config.startsWith("trojan://", true) -> "trojan"
+    config.startsWith("ss://", true) -> "ss"
+    else -> "other"
+}
+
+private val protocolOrder = listOf("vless", "vmess", "trojan", "ss", "other")
+
+/** حذف موارد تکراری و مرتب‌سازی بر اساس نوع پروتکل، سپس بر اساس متن. */
+private fun sortAndDedupeConfigs(list: List<String>): List<String> =
+    list.distinct().sortedWith(
+        compareBy({ protocolOrder.indexOf(configProtocol(it)).let { i -> if (i == -1) protocolOrder.size else i } }, { it })
+    )
+
+private fun protocolColor(protocol: String) = when (protocol) {
+    "vless" -> SuccessGreen
+    "vmess" -> InfoBlue
+    "trojan" -> WarningOrange
+    "ss" -> BrandPurple
+    else -> InfoBlue
+}
 
 // تابع دریافت داده‌ها از اینترنت
 suspend fun fetchConfigsList(url: String): List<String> {
@@ -126,6 +159,8 @@ fun FreeConfigScreen() {
             color = MaterialTheme.colorScheme.primary
         )
 
+        Spacer(modifier = Modifier.height(8.dp))
+        HelpCard(stringResource(R.string.help_free_configs))
         Spacer(modifier = Modifier.height(12.dp))
 
         val mixedLabel = stringResource(R.string.free_source_mixed)
@@ -157,7 +192,7 @@ fun FreeConfigScreen() {
                             val result = fetchConfigsList(url)
                             if (result.isNotEmpty()) {
                                 configs.clear()
-                                configs.addAll(result)
+                                configs.addAll(sortAndDedupeConfigs(result))
                             } else {
                                 Toast.makeText(context, fetchErrorLabel, Toast.LENGTH_SHORT).show()
                                 openInBrowser(context, url)
@@ -200,6 +235,16 @@ fun FreeConfigScreen() {
 
         Spacer(modifier = Modifier.height(12.dp))
 
+        if (configs.isNotEmpty()) {
+            Text(
+                stringResource(R.string.free_count_label, configs.size),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 6.dp)
+            )
+        }
+
         // نمایش لیست کانفیگ‌ها
         Box(
             modifier = Modifier
@@ -219,9 +264,12 @@ fun FreeConfigScreen() {
                     fontSize = 13.sp
                 )
             } else {
-                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)
+                ) {
                     items(configs) { item ->
-                        ConfigListItem(item)
+                        ConfigListItem(item, context)
                     }
                 }
             }
@@ -230,17 +278,51 @@ fun FreeConfigScreen() {
 }
 
 @Composable
-fun ConfigListItem(text: String) {
-    Column(modifier = Modifier.fillMaxWidth().padding(8.dp)) {
-        Text(
-            text = text,
-            fontSize = 9.sp,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            lineHeight = 12.sp
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Divider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outline)
+fun ConfigListItem(text: String, context: Context) {
+    val protocol = configProtocol(text)
+    GlassCard(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .background(protocolColor(protocol).copy(alpha = 0.18f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
+            ) {
+                Text(
+                    protocol.uppercase(),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = protocolColor(protocol)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = text,
+                fontSize = 10.sp,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(
+                onClick = {
+                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                    clipboard.setPrimaryClip(ClipData.newPlainText("config", text))
+                    Toast.makeText(context, context.getString(R.string.free_item_copied), Toast.LENGTH_SHORT).show()
+                },
+                modifier = Modifier.size(28.dp)
+            ) {
+                Icon(
+                    Icons.Default.ContentCopy,
+                    contentDescription = stringResource(R.string.action_copy),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
     }
 }
 

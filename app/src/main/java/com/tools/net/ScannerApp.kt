@@ -46,6 +46,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.components.HelpCard
 import com.tools.net.ui.theme.ErrorRed
 import com.tools.net.ui.theme.SuccessGreen
 import com.tools.net.ui.theme.WarningOrange
@@ -71,6 +72,9 @@ fun ScannerApp(vm: ScannerViewModel) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
+        HelpCard(stringResource(R.string.help_scanner))
+        Spacer(modifier = Modifier.height(12.dp))
+
         // ۱. بخش تنظیمات عددی (ترد، تایم‌اوت، تعداد)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -216,11 +220,40 @@ fun ScannerApp(vm: ScannerViewModel) {
         }
 
         // ۵. نمایش نتایج
-        Text(
-            stringResource(R.string.scanner_results_title),
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                stringResource(R.string.scanner_results_title),
+                style = MaterialTheme.typography.titleMedium
+            )
+            val exchangeSuccessLabel = stringResource(R.string.scanner_exchange_success)
+            val successCount = vm.foundIps.count { it.exchangeStatus == exchangeSuccessLabel }
+            if (successCount > 0 && !vm.isScanning.value) {
+                Button(
+                    onClick = { vm.testTopIpsSpeed(5) },
+                    enabled = !vm.isSpeedTesting,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.tertiary)
+                ) {
+                    Text(
+                        stringResource(R.string.scanner_speed_test_action, minOf(5, successCount)),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+        if (vm.isSpeedTesting) {
+            Text(
+                vm.speedTestProgress.ifEmpty { stringResource(R.string.scanner_speed_test_running) },
+                fontSize = 11.sp,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
 
         LazyColumn(
             modifier = Modifier
@@ -298,6 +331,39 @@ fun ScannerResultItem(res: IpScanResult, vm: ScannerViewModel) {
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp
                 )
+            }
+
+            if (res.isSpeedTested) {
+                Divider(
+                    modifier = Modifier.padding(vertical = 8.dp),
+                    thickness = 0.5.dp,
+                    color = MaterialTheme.colorScheme.outline
+                )
+                if (res.downloadMbps <= 0 && res.uploadMbps <= 0) {
+                    Text(
+                        stringResource(R.string.scanner_speed_failed),
+                        fontSize = 11.sp,
+                        color = ErrorRed
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            stringResource(R.string.scanner_speed_download, String.format("%.1f", res.downloadMbps)),
+                            fontSize = 11.sp,
+                            color = SuccessGreen,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            stringResource(R.string.scanner_speed_upload, String.format("%.1f", res.uploadMbps)),
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
             }
         }
     }

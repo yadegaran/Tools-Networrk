@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.tools.net.ui.components.GlassCard
+import com.tools.net.ui.components.HelpCard
 import com.tools.net.ui.theme.ErrorRed
 import com.tools.net.ui.theme.SuccessGreen
 import com.tools.net.ui.theme.WarningOrange
@@ -63,8 +64,10 @@ fun SupportScreen(vm: ScannerViewModel) {
                 text = stringResource(R.string.support_subtitle),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 16.dp)
             )
+            HelpCard(stringResource(R.string.help_support))
+            Spacer(modifier = Modifier.height(16.dp))
         }
 
         item {
